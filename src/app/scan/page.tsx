@@ -40,9 +40,13 @@ async function ScanResults({ url }: { url: string }) {
     const summaryResult = await summarizeVulnerabilityReport({ report: scanResult.scanReport });
 
     return <ResultsDisplay url={decodedUrl} report={scanResult.scanReport} summary={summaryResult.summary} />;
-  } catch (error) {
+  } catch (error: any) {
     console.error("Scanning failed:", error);
-    return <ErrorState message="We couldn't scan the provided URL. It might be offline, or an unexpected error occurred. Please try again later." />;
+    let message = "We couldn't scan the provided URL. It might be offline, or an unexpected error occurred. Please try again later.";
+    if (error.message && error.message.includes('VIRUSTOTAL_API_KEY is not set')) {
+        message = "The VirusTotal API key is not configured. Please set the VIRUSTOTAL_API_KEY in your .env file to enable live scanning.";
+    }
+    return <ErrorState message={message} />;
   }
 }
 
