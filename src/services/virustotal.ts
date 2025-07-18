@@ -23,15 +23,22 @@ async function fetchWithApiKey(endpoint: string, options: RequestInit = {}) {
         (headers as any)['Content-Type'] = 'application/x-www-form-urlencoded';
     }
 
-    const response = await fetch(`${VIRUSTOTAL_API_URL}${endpoint}`, { ...options, headers });
-    
-    if (!response.ok) {
-        const errorText = await response.text();
-        console.error(`VirusTotal API Error (${response.status}): ${errorText}`);
-        throw new Error(`Failed to fetch from VirusTotal API. Status: ${response.status}`);
+    try {
+        const response = await fetch(`${VIRUSTOTAL_API_URL}${endpoint}`, { ...options, headers });
+        
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error(`VirusTotal API Error (${response.status}): ${errorText}`);
+            // Throw a more informative error.
+            throw new Error(`VirusTotal API request failed with status ${response.status}: ${errorText}`);
+        }
+        
+        return response.json();
+    } catch(error: any) {
+        console.error('Error during fetchWithApiKey:', error);
+        // Re-throw the error to be caught by the calling function.
+        throw new Error(`Failed to communicate with VirusTotal API: ${error.message}`);
     }
-    
-    return response.json();
 }
 
 // Submits a URL for analysis and returns the analysis ID.
