@@ -40,7 +40,7 @@ export function ScanForm() {
           render={({ field }) => (
             <FormItem className="flex-grow">
               <FormControl>
-                <Input placeholder="https://example.com (educational simulation only)" {...field} aria-label="Website URL" />
+                <Input placeholder="https://example.com" {...field} aria-label="Website URL" />
               </FormControl>
               <FormMessage />
             </FormItem>
