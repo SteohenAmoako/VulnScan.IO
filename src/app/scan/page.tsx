@@ -45,6 +45,8 @@ async function ScanResults({ url }: { url: string }) {
     let message = "We couldn't scan the provided URL. It might be offline, or an unexpected error occurred. Please try again later.";
     if (error.message && error.message.includes('VIRUSTOTAL_API_KEY is not set')) {
         message = "The VirusTotal API key is not configured. Please set the VIRUSTOTAL_API_KEY in your .env file to enable live scanning.";
+    } else if (error.message) {
+        message = `An unexpected error occurred: ${error.message}. Please try again later.`;
     }
     return <ErrorState message={message} />;
   }
