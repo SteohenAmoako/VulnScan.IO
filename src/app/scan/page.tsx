@@ -152,28 +152,29 @@ async function ScanResults({ url }: { url: string }) {
 
     const summaryResult = await summarizeVulnerabilityReport(summaryContext);
 
-    // Calculate Severity
+    // Calculate Severity with a weighted approach
     const stats = getStatsFromReport(scanResult.scanReport);
-    let highSeverity = stats.malicious;
-    let mediumSeverity = stats.suspicious;
-    let lowSeverity = 0;
+    let highSeverity = (stats.malicious * 3) + (!isHttps ? 2 : 0);
+    let mediumSeverity = stats.suspicious * 2;
+    let lowSeverity = 0; // For informational items
 
-    if (!isHttps) {
-        highSeverity++;
-    }
     urlParamAnalysis.findings.forEach(finding => {
         if (finding.matches.length > 0) {
             mediumSeverity += finding.matches.length;
         }
     });
 
+    if (domainInfo && !domainInfo.error && (domainInfo.domain_age || domainInfo.registrar)) {
+        lowSeverity = 1; // Count domain info as one low-severity informational item.
+    }
+
     const totalIssues = highSeverity + mediumSeverity + lowSeverity;
-    const secureCount = totalIssues > 0 ? 0 : 1;
+    const secureCount = totalIssues === 0 ? 1 : 0;
 
     const severityData = [
         { name: 'High', value: highSeverity, fill: 'hsl(var(--destructive))' },
         { name: 'Medium', value: mediumSeverity, fill: 'hsl(var(--chart-4))' },
-        { name: 'Low', value: lowSeverity, fill: 'hsl(var(--chart-2))' },
+        { name: 'Low/Info', value: lowSeverity, fill: 'hsl(var(--chart-2))' },
         { name: 'Secure', value: secureCount, fill: 'hsl(var(--chart-3))' }
     ].filter(item => item.value > 0);
 
