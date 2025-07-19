@@ -2,9 +2,11 @@ import { Suspense } from 'react';
 import { redirect } from 'next/navigation';
 import { scanWebsite } from '@/ai/flows/scan-website-vulnerability';
 import { summarizeVulnerabilityReport } from '@/ai/flows/summarize-vulnerability-report';
+import { getDomainInfo } from '@/ai/flows/get-domain-info';
 import { Header } from '@/components/header';
 import { Footer } from '@/components/footer';
 import { ResultsDisplay } from '@/components/results-display';
+import { URLDetails } from '@/components/url-details';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { AlertTriangle, Home } from 'lucide-react';
 import type { Metadata } from 'next';
@@ -25,22 +27,38 @@ interface ScanPageProps {
 
 async function ScanResults({ url }: { url: string }) {
   let decodedUrl: string;
+  let domain: string;
+
   try {
     decodedUrl = decodeURIComponent(url);
     if (!/^https?:\/\//i.test(decodedUrl)) {
         decodedUrl = 'http://' + decodedUrl;
     }
-    new URL(decodedUrl); // This will throw an error if the URL is invalid
+    const urlObject = new URL(decodedUrl);
+    domain = urlObject.hostname;
   } catch (error) {
     return <ErrorState message="The provided URL is invalid. Please go back and try again with a valid URL." />;
   }
 
   try {
-    const scanResult = await scanWebsite({ url: decodedUrl });
-    console.log(scanResult)
-    const summaryResult = await summarizeVulnerabilityReport({ report: scanResult.scanReport });
+    const scanPromise = scanWebsite({ url: decodedUrl });
+    const summaryPromise = scanPromise.then(scanResult => 
+        summarizeVulnerabilityReport({ report: scanResult.scanReport })
+    );
+    const domainInfoPromise = getDomainInfo({ domain });
 
-    return <ResultsDisplay url={decodedUrl} report={scanResult.scanReport} summary={summaryResult.summary} />;
+    const [scanResult, summaryResult, domainInfo] = await Promise.all([
+        scanPromise,
+        summaryPromise,
+        domainInfoPromise
+    ]);
+
+    return (
+      <>
+        <URLDetails url={decodedUrl} domainInfo={domainInfo} />
+        <ResultsDisplay url={decodedUrl} report={scanResult.scanReport} summary={summaryResult.summary} />
+      </>
+    );
   } catch (error: any) {
     console.error("Scanning failed:", error);
     let message = "We couldn't scan the provided URL. It might be offline, or an unexpected error occurred. Please try again later.";
