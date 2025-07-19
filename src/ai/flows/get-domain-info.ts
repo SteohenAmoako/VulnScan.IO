@@ -17,7 +17,7 @@ const DomainInfoInputSchema = z.object({
 });
 export type DomainInfoInput = z.infer<typeof DomainInfoInputSchema>;
 
-export const DomainInfoSchema = z.object({
+const DomainInfoSchema = z.object({
   domain_age: z.string().optional(),
   registrar: z.string().optional(),
   country: z.string().optional(),
