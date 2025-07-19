@@ -2,7 +2,7 @@
 import fetch from 'node-fetch';
 import type { DomainInfo } from '@/ai/flows/get-domain-info';
 
-const API_NINJAS_URL = 'https://api.api-ninjas.com/v1/domainlookup?domain=';
+const API_NINJAS_URL = 'https://api.api-ninjas.com/v1/whois?domain=';
 
 export async function lookupDomain(domain: string): Promise<DomainInfo> {
     const apiKey = process.env.API_NINJAS_KEY;
@@ -21,8 +21,8 @@ export async function lookupDomain(domain: string): Promise<DomainInfo> {
             throw new Error(`API Ninjas request failed with status ${response.status}: ${errorText}`);
         }
         
-        const data = await response.json() as DomainInfo[];
-        return data[0] || { error: 'No data returned from API.' };
+        const data = await response.json() as DomainInfo;
+        return data || { error: 'No data returned from API.' };
 
     } catch (error: any) {
         console.error('Error during lookupDomain:', error);
