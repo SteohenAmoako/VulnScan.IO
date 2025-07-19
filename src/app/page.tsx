@@ -9,8 +9,8 @@ export default function Home() {
       <Header />
       <main className="flex-grow">
         <section className="py-20 md:py-24 lg:py-32 xl:py-40">
-          <div className="container px-4 md:px-6">
-            <div className="flex flex-col items-center space-y-6 text-center">
+          <div className="container px-4 md:px-6 flex mx-auto ">
+            <div className="flex flex-col items-center space-y-6 text-center mx-auto">
               <div className="space-y-4">
                 <div className="inline-block rounded-lg bg-secondary px-3 py-1 text-sm text-secondary-foreground">Web Security For Education</div>
                 <h1 className="text-4xl font-bold tracking-tighter sm:text-5xl md:text-6xl lg:text-7xl/none font-headline text-primary">

@@ -28,8 +28,8 @@ const resources = [
 export function EducationalResources() {
   return (
     <section id="resources" className="w-full py-12 md:py-24 lg:py-32 bg-card border-t">
-      <div className="container px-4 md:px-6">
-        <div className="flex flex-col items-center justify-center space-y-4 text-center">
+      <div className="container px-4 md:px-6  flex flex-col mx-auto">
+        <div className="flex flex-col items-center justify-center space-y-4 text-center ">
           <div className="space-y-2">
             <div className="inline-block rounded-lg bg-secondary px-3 py-1 text-sm text-secondary-foreground">Knowledge Base</div>
             <h2 className="text-3xl font-bold tracking-tighter sm:text-5xl font-headline">Educational Resources</h2>
