@@ -6,13 +6,14 @@ import { getDomainInfo } from '@/ai/flows/get-domain-info';
 import { Header } from '@/components/header';
 import { Footer } from '@/components/footer';
 import { ResultsDisplay } from '@/components/results-display';
-import { URLDetails } from '@/components/url-details';
+import { URLDetails, analyzeUrlParameters } from '@/components/url-details';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { AlertTriangle, Home } from 'lucide-react';
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import Loading from './loading';
+import { SeverityChart } from '@/components/severity-chart';
 
 export const metadata: Metadata = {
     title: 'Scan Results | VulnScan.IO',
@@ -24,6 +25,21 @@ interface ScanPageProps {
     url?: string;
   };
 }
+
+// Helper to get stats from the raw report text. This is a bit brittle but works for this use case.
+function getStatsFromReport(report: string): { malicious: number; suspicious: number; harmless: number } {
+    const stats = { malicious: 0, suspicious: 0, harmless: 0 };
+    const maliciousMatch = report.match(/(\d+)\s+engines\s+flagged\s+this\s+URL\s+as\s+malicious/i);
+    const suspiciousMatch = report.match(/(\d+)\s+as\s+suspicious/i);
+    const harmlessMatch = report.match(/(\d+)\s+as\s+harmless/i);
+
+    if (maliciousMatch) stats.malicious = parseInt(maliciousMatch[1], 10);
+    if (suspiciousMatch) stats.suspicious = parseInt(suspiciousMatch[1], 10);
+    if (harmlessMatch) stats.harmless = parseInt(harmlessMatch[1], 10);
+    
+    return stats;
+}
+
 
 async function ScanResults({ url }: { url: string }) {
   let decodedUrl: string;
@@ -41,22 +57,64 @@ async function ScanResults({ url }: { url: string }) {
   }
 
   try {
+    const isHttps = new URL(decodedUrl).protocol === 'https:';
+    const urlParamAnalysis = analyzeUrlParameters(decodedUrl);
+    
     const scanPromise = scanWebsite({ url: decodedUrl });
-    const summaryPromise = scanPromise.then(scanResult => 
-        summarizeVulnerabilityReport({ report: scanResult.scanReport })
-    );
     const domainInfoPromise = getDomainInfo({ domain });
 
-    const [scanResult, summaryResult, domainInfo] = await Promise.all([
+    const [scanResult, domainInfo] = await Promise.all([
         scanPromise,
-        summaryPromise,
         domainInfoPromise
     ]);
 
+    const summaryContext = {
+        report: scanResult.scanReport,
+        isHttps,
+        urlParamFindings: urlParamAnalysis.findings,
+    };
+
+    const summaryResult = await summarizeVulnerabilityReport(summaryContext);
+
+    // Calculate Severity
+    const stats = getStatsFromReport(scanResult.scanReport);
+    let highSeverity = stats.malicious;
+    let mediumSeverity = stats.suspicious;
+    let lowSeverity = 0;
+
+    if (!isHttps) {
+        highSeverity++;
+    }
+    urlParamAnalysis.findings.forEach(finding => {
+        if (finding.matches.length > 0) {
+            mediumSeverity += finding.matches.length;
+        }
+    });
+
+    const totalIssues = highSeverity + mediumSeverity + lowSeverity;
+    const secureCount = totalIssues > 0 ? 0 : 1;
+
+    const severityData = [
+        { name: 'High', value: highSeverity, fill: 'hsl(var(--destructive))' },
+        { name: 'Medium', value: mediumSeverity, fill: 'hsl(var(--chart-4))' },
+        { name: 'Low', value: lowSeverity, fill: 'hsl(var(--chart-2))' },
+        { name: 'Secure', value: secureCount, fill: 'hsl(var(--chart-3))' }
+    ].filter(item => item.value > 0);
+
+
     return (
       <>
-        <URLDetails url={decodedUrl} domainInfo={domainInfo} />
-        <ResultsDisplay url={decodedUrl} report={scanResult.scanReport} summary={summaryResult.summary} />
+        <URLDetails url={decodedUrl} domainInfo={domainInfo} urlParamAnalysis={urlParamAnalysis} />
+        <div className="container px-4 md:px-6 py-12">
+            <div className="grid gap-8 lg:grid-cols-3">
+                <div className="lg:col-span-2">
+                    <ResultsDisplay url={decodedUrl} report={scanResult.scanReport} summary={summaryResult.summary} />
+                </div>
+                <div className="lg:col-span-1">
+                    <SeverityChart data={severityData} />
+                </div>
+            </div>
+        </div>
       </>
     );
   } catch (error: any) {

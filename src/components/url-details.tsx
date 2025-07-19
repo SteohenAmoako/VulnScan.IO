@@ -8,6 +8,14 @@ import type { DomainInfo } from "@/ai/flows/get-domain-info";
 interface URLDetailsProps {
     url: string;
     domainInfo: DomainInfo | null;
+    urlParamAnalysis: {
+        hasParams: boolean;
+        findings: {
+            key: string;
+            value: string;
+            matches: string[];
+        }[];
+    }
 }
 
 const MALICIOUS_PATTERNS = [
@@ -63,7 +71,7 @@ const MALICIOUS_PATTERNS = [
 ];
 
 
-function analyzeUrlParameters(inputUrl: string) {
+export function analyzeUrlParameters(inputUrl: string) {
     try {
         const url = new URL(inputUrl);
         const searchParams = new URLSearchParams(url.search);
@@ -86,9 +94,9 @@ function analyzeUrlParameters(inputUrl: string) {
     }
 }
 
-export function URLDetails({ url, domainInfo }: URLDetailsProps) {
+export function URLDetails({ url, domainInfo, urlParamAnalysis }: URLDetailsProps) {
     const isHttps = new URL(url).protocol === 'https:';
-    const { hasParams, findings } = analyzeUrlParameters(url);
+    const { hasParams, findings } = urlParamAnalysis;
 
     return (
         <div className="container px-4 md:px-6 py-12">
@@ -128,7 +136,7 @@ export function URLDetails({ url, domainInfo }: URLDetailsProps) {
                                 <span>No URL parameters to analyze.</span>
                             </div>
                         ) : (
-                            <ul className="space-y-2 text-sm">
+                            <ul className="space-y-2 text-sm max-h-40 overflow-y-auto">
                                 {findings.map(({ key, value, matches }, index) => (
                                     <li key={index} className="flex flex-col">
                                         <div>
