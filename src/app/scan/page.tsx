@@ -1,3 +1,4 @@
+
 import { Suspense } from 'react';
 import { redirect } from 'next/navigation';
 import { scanWebsite } from '@/ai/flows/scan-website-vulnerability';
@@ -95,25 +96,30 @@ function analyzeUrlParameters(inputUrl: string) {
                 .filter(({ regex }) => regex.test(value) || regex.test(key))
                 .map(({ label }) => label);
 
-            findings.push({ key, value, matches });
+            if (matches.length > 0) {
+              findings.push({ key, value, matches });
+            }
         }
         return { hasParams: true, findings };
     } catch (error) {
-        return { hasParams: false, findings: [{ key: 'Error', value: (error as Error).message, matches: [] }] };
+        return { hasParams: false, findings: [] };
     }
 }
 
 // Helper to get stats from the raw report text. This is a bit brittle but works for this use case.
 function getStatsFromReport(report: string): { malicious: number; suspicious: number; harmless: number } {
     const stats = { malicious: 0, suspicious: 0, harmless: 0 };
-    const maliciousMatch = report.match(/(\d+)\s+engines\s+flagged\s+this\s+URL\s+as\s+malicious/i);
-    const suspiciousMatch = report.match(/(\d+)\s+as\s+suspicious/i);
-    const harmlessMatch = report.match(/(\d+)\s+as\s+harmless/i);
-
-    if (maliciousMatch) stats.malicious = parseInt(maliciousMatch[1], 10);
-    if (suspiciousMatch) stats.suspicious = parseInt(suspiciousMatch[1], 10);
-    if (harmlessMatch) stats.harmless = parseInt(harmlessMatch[1], 10);
+    try {
+        const maliciousMatch = report.match(/(\d+)\s+engines\s+flagged\s+this\s+URL\s+as\s+malicious/i);
+        const suspiciousMatch = report.match(/(\d+)\s+as\s+suspicious/i);
+        const harmlessMatch = report.match(/(\d+)\s+as\s+harmless/i);
     
+        if (maliciousMatch) stats.malicious = parseInt(maliciousMatch[1], 10);
+        if (suspiciousMatch) stats.suspicious = parseInt(suspiciousMatch[1], 10);
+        if (harmlessMatch) stats.harmless = parseInt(harmlessMatch[1], 10);
+    } catch (e) {
+        // Ignore if report format is not as expected
+    }
     return stats;
 }
 
@@ -137,21 +143,21 @@ async function ScanResults({ url }: { url: string }) {
     const isHttps = new URL(decodedUrl).protocol === 'https:';
     const urlParamAnalysis = analyzeUrlParameters(decodedUrl);
     
-    const scanPromise = scanWebsite({ url: decodedUrl });
-    const domainInfoPromise = getDomainInfo({ domain });
-    const sslInfoPromise = getSslInfo({ host: domain });
-
-
-    const [scanResult, domainInfo, sslInfo] = await Promise.all([
-        scanPromise,
-        domainInfoPromise,
-        sslInfoPromise
+    // Fetch all data in parallel
+    const [domainInfo, sslInfo] = await Promise.all([
+        getDomainInfo({ domain }),
+        isHttps ? getSslInfo({ host: domain }) : Promise.resolve(null),
     ]);
+    
+    // VirusTotal scan depends on the URL, other data can be passed to it
+    const scanResult = await scanWebsite({ url: decodedUrl, sslInfo: sslInfo ?? undefined });
 
+    // Now, create the summary with all the data gathered
     const summaryContext = {
         report: scanResult.scanReport,
         isHttps,
         urlParamFindings: urlParamAnalysis.findings,
+        sslInfo: sslInfo ?? undefined,
     };
 
     const summaryResult = await summarizeVulnerabilityReport(summaryContext);
