@@ -12,7 +12,7 @@ import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
 import { getSslLabsAnalysis } from '@/services/ssllabs';
 
-export const SslInfoInputSchema = z.object({
+const SslInfoInputSchema = z.object({
   host: z.string().describe('The host to analyze (e.g., example.com).'),
 });
 export type SslInfoInput = z.infer<typeof SslInfoInputSchema>;
@@ -29,7 +29,7 @@ const EndpointSchema = z.object({
     }),
 });
 
-export const SslLabsInfoSchema = z.object({
+const SslLabsInfoSchema = z.object({
   grade: z.string().optional(),
   protocols: z.array(z.string()).optional(),
   error: z.string().optional(),
