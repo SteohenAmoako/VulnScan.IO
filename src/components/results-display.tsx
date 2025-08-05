@@ -6,9 +6,9 @@ import { AlertCircle, CheckCircle2, ShieldQuestion, FileText, Bot } from 'lucide
 import { Badge } from "@/components/ui/badge";
 
 interface ResultsDisplayProps {
-  url: string;
-  report: string;
-  summary: string;
+    url: string;
+    report: string;
+    summary: string;
 }
 
 function parseReport(reportText: string) {
@@ -21,7 +21,7 @@ function parseReport(reportText: string) {
             result.push({ title, content });
         }
     }
-    
+
     if (result.length === 0 && reportText.trim()) {
         return [{ title: "Full Report", content: reportText }];
     }
@@ -42,6 +42,34 @@ function getSeverityInfo(title: string): { icon: React.ReactNode; variant: "dest
     return { icon: <FileText className="w-5 h-5 text-muted-foreground" />, variant: 'default', level: 'Info' };
 }
 
+function ReportContent({ content }: { content: string }) {
+    let parsedData;
+    try {
+        parsedData = JSON.parse(content);
+    } catch (e) {
+        // If it's not valid JSON, render as plain text.
+        return (
+            <div className="p-4 bg-muted rounded-md text-sm text-foreground overflow-x-auto font-code whitespace-pre-wrap">
+                {content}
+            </div>
+        );
+    }
+
+    // It is JSON, so we format it as a key-value list.
+    return (
+        <div className="p-4 bg-muted rounded-md text-sm text-foreground">
+            <ul className="space-y-2 font-code">
+                {Object.entries(parsedData).map(([key, value]) => (
+                    <li key={key} className="flex flex-col">
+                        <span className="font-semibold text-primary">{key}:</span>
+                        <span className="pl-4 text-foreground break-words">{String(value)}</span>
+                    </li>
+                ))}
+            </ul>
+        </div>
+    );
+}
+
 export function ResultsDisplay({ url, report, summary }: ResultsDisplayProps) {
     const reportSections = parseReport(report);
 
@@ -53,9 +81,9 @@ export function ResultsDisplay({ url, report, summary }: ResultsDisplayProps) {
                     Results for: <span className="font-medium text-primary break-all">{url}</span>
                 </p>
             </div>
-            
+
             <Card>
-                 <CardHeader>
+                <CardHeader>
                     <CardTitle className="flex items-center gap-2">
                         <Bot className="w-6 h-6 text-accent" />
                         AI Summary
@@ -94,9 +122,7 @@ export function ResultsDisplay({ url, report, summary }: ResultsDisplayProps) {
                                             <Badge variant={variant}>{level}</Badge>
                                         </AccordionTrigger>
                                         <AccordionContent>
-                                            <pre className="p-4 bg-muted rounded-md text-sm text-foreground overflow-x-auto font-code whitespace-pre-wrap">
-                                                {section.content}
-                                            </pre>
+                                            <ReportContent content={section.content} />
                                         </AccordionContent>
                                     </AccordionItem>
                                 )
