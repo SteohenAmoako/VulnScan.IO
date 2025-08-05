@@ -2,12 +2,16 @@
 'use client';
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { CheckCircle2, AlertTriangle, ShieldCheck, Search, Info } from "lucide-react";
+import { CheckCircle2, AlertTriangle, ShieldCheck, Search, Info, Lock } from "lucide-react";
 import type { DomainInfo } from "@/ai/flows/get-domain-info";
+import type { SslLabsInfo } from "@/ai/flows/get-ssl-info";
+import { Badge } from "@/components/ui/badge";
+
 
 interface URLDetailsProps {
     url: string;
     domainInfo: DomainInfo | null;
+    sslInfo: SslLabsInfo | null;
     urlParamAnalysis: {
         hasParams: boolean;
         findings: {
@@ -18,13 +22,20 @@ interface URLDetailsProps {
     }
 }
 
-export function URLDetails({ url, domainInfo, urlParamAnalysis }: URLDetailsProps) {
+const getGradeVariant = (grade: string | undefined) => {
+    if (!grade) return 'secondary';
+    if (['A+', 'A'].includes(grade)) return 'default';
+    if (['B', 'C'].includes(grade)) return 'secondary';
+    return 'destructive';
+}
+
+export function URLDetails({ url, domainInfo, sslInfo, urlParamAnalysis }: URLDetailsProps) {
     const isHttps = new URL(url).protocol === 'https:';
     const { hasParams, findings } = urlParamAnalysis;
 
     return (
         <div className="container px-4 md:px-6 py-12">
-            <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
+            <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-4">
                 <Card>
                     <CardHeader>
                         <CardTitle className="flex items-center gap-2">
@@ -43,6 +54,34 @@ export function URLDetails({ url, domainInfo, urlParamAnalysis }: URLDetailsProp
                                 <AlertTriangle className="w-5 h-5 text-destructive" />
                                 <span className="font-medium text-destructive">Not Secure: Using HTTP</span>
                             </>
+                        )}
+                    </CardContent>
+                </Card>
+                <Card>
+                    <CardHeader>
+                        <CardTitle className="flex items-center gap-2">
+                            <Lock className="w-6 h-6 text-primary" />
+                            SSL/TLS Analysis
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        {sslInfo && !sslInfo.error ? (
+                             <div className="space-y-2">
+                                <div className="flex items-center gap-2">
+                                    <span className="font-semibold">Grade:</span>
+                                    <Badge variant={getGradeVariant(sslInfo.grade)}>{sslInfo.grade || 'N/A'}</Badge>
+                                </div>
+                                {sslInfo.protocols && sslInfo.protocols.length > 0 && (
+                                    <div>
+                                        <span className="font-semibold">Protocols:</span>
+                                        <div className="flex flex-wrap gap-1 mt-1">
+                                            {sslInfo.protocols.map((p, i) => <Badge key={i} variant="outline">{p}</Badge>)}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        ) : (
+                             <p className="text-sm text-muted-foreground">{sslInfo?.error || 'SSL/TLS information could not be retrieved.'}</p>
                         )}
                     </CardContent>
                 </Card>

@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation';
 import { scanWebsite } from '@/ai/flows/scan-website-vulnerability';
 import { summarizeVulnerabilityReport } from '@/ai/flows/summarize-vulnerability-report';
 import { getDomainInfo } from '@/ai/flows/get-domain-info';
+import { getSslInfo } from '@/ai/flows/get-ssl-info';
 import { Header } from '@/components/header';
 import { Footer } from '@/components/footer';
 import { ResultsDisplay } from '@/components/results-display';
@@ -138,10 +139,13 @@ async function ScanResults({ url }: { url: string }) {
     
     const scanPromise = scanWebsite({ url: decodedUrl });
     const domainInfoPromise = getDomainInfo({ domain });
+    const sslInfoPromise = getSslInfo({ host: domain });
 
-    const [scanResult, domainInfo] = await Promise.all([
+
+    const [scanResult, domainInfo, sslInfo] = await Promise.all([
         scanPromise,
-        domainInfoPromise
+        domainInfoPromise,
+        sslInfoPromise
     ]);
 
     const summaryContext = {
@@ -164,6 +168,17 @@ async function ScanResults({ url }: { url: string }) {
         }
     });
 
+    if (sslInfo && !sslInfo.error && sslInfo.grade) {
+        if (['A+', 'A'].includes(sslInfo.grade)) {
+           // Good grade, no severity increase
+        } else if (['B', 'C'].includes(sslInfo.grade)) {
+            mediumSeverity += 1;
+        } else {
+            highSeverity += 1; // F, T, etc.
+        }
+    }
+
+
     if (domainInfo && !domainInfo.error && (domainInfo.domain_age || domainInfo.registrar)) {
         lowSeverity = 1; // Count domain info as one low-severity informational item.
     }
@@ -181,7 +196,7 @@ async function ScanResults({ url }: { url: string }) {
 
     return (
       <>
-        <URLDetails url={decodedUrl} domainInfo={domainInfo} urlParamAnalysis={urlParamAnalysis} />
+        <URLDetails url={decodedUrl} domainInfo={domainInfo} urlParamAnalysis={urlParamAnalysis} sslInfo={sslInfo} />
         <div className="container px-4 md:px-6 py-12">
             <div className="grid gap-8 lg:grid-cols-3">
                 <div className="lg:col-span-2">
