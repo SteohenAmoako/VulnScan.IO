@@ -5,6 +5,9 @@ import { Toaster } from '@/components/ui/toaster';
 export const metadata: Metadata = {
   title: 'VulnScan.IO - Web Vulnerability Scanner',
   description: 'Scan websites for vulnerabilities for educational purposes.',
+  icons: {
+    icon: '/icon.svg',
+  }
 };
 
 export default function RootLayout({
