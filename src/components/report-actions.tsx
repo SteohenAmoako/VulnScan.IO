@@ -5,7 +5,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { Download, Repeat, Search, MessageSquareWarning, Send } from 'lucide-react';
+import { Download, Repeat, Search, MessageSquareWarning, Send, CheckCircle2 } from 'lucide-react';
 import Link from 'next/link';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
@@ -20,6 +20,45 @@ interface ReportActionsProps {
 
 function ReportFeedback({ url, summary }: { url: string, summary: string }) {
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [succeeded, setSucceeded] = useState(false);
+
+    const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+        event.preventDefault();
+        setIsSubmitting(true);
+        
+        const formData = new FormData(event.currentTarget);
+        
+        try {
+            const response = await fetch("https://formsubmit.co/stevekobbi20@gmail.com", {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'Accept': 'application/json'
+                }
+            });
+
+            if (response.ok) {
+                setSucceeded(true);
+            } else {
+                 throw new Error('Form submission failed');
+            }
+        } catch (error) {
+            console.error(error);
+            // Optionally, show an error message to the user
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+    
+    if (succeeded) {
+        return (
+            <div className="text-center p-4 mt-6 bg-green-100 dark:bg-green-900/50 border border-green-200 dark:border-green-800 rounded-lg">
+                <CheckCircle2 className="w-8 h-8 mx-auto text-green-600 dark:text-green-400 mb-2" />
+                <p className="font-semibold text-green-800 dark:text-green-200">Thank you for your feedback!</p>
+                <p className="text-sm text-green-700 dark:text-green-300">Your insights help improve the scanner.</p>
+            </div>
+        );
+    }
 
     return (
         <Card className="mt-6 border-destructive/50 w-full max-w-lg">
@@ -30,12 +69,11 @@ function ReportFeedback({ url, summary }: { url: string, summary: string }) {
                 </CardTitle>
             </CardHeader>
             <CardContent>
-                <form 
-                    action="https://formsubmit.co/stevekobbi20@gmail.com" 
-                    method="POST" 
+                <form
+                    onSubmit={handleSubmit}
                     className="space-y-4"
-                    onSubmit={() => setIsSubmitting(true)}
                 >
+                    <input type="hidden" name="_subject" value={`Feedback for Scan: ${url}`} />
                     <input type="hidden" name="Scanned URL" value={url} />
                     <input type="hidden" name="AI Summary" value={summary} />
                     <Textarea
@@ -77,14 +115,19 @@ export function ReportActions({ url, report, summary }: ReportActionsProps) {
             return;
         }
 
-        const severityCanvas = await html2canvas(severityChartElement, { backgroundColor: null });
-        const mozillaCanvas = await html2canvas(mozillaChartElement, { backgroundColor: null });
+        toast({
+            title: "Generating PDF...",
+            description: "Please wait while your report is being prepared.",
+        });
+
+        const severityCanvas = await html2canvas(severityChartElement, { backgroundColor: null, scale: 2 });
+        const mozillaCanvas = await html2canvas(mozillaChartElement, { backgroundColor: null, scale: 2 });
         const severityImgData = severityCanvas.toDataURL('image/png');
         const mozillaImgData = mozillaCanvas.toDataURL('image/png');
 
-        const doc = new jsPDF();
+        const doc = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' });
         const pageWidth = doc.internal.pageSize.getWidth();
-        const margin = 25;
+        const margin = 25; // 2.5cm
         const maxLineWidth = pageWidth - margin * 2;
         const lineSpacing = 1.5;
 
@@ -108,7 +151,7 @@ export function ReportActions({ url, report, summary }: ReportActionsProps) {
         doc.setFont('helvetica', 'normal');
         const summaryLines = doc.splitTextToSize(summary, maxLineWidth);
         doc.text(summaryLines, margin, y, { lineHeightFactor: lineSpacing });
-        y += (summaryLines.length * 5 * lineSpacing) + 10;
+        y += (summaryLines.length * 4 * lineSpacing) + 5; // Adjusted spacing
         
         if (y > 250) { 
             doc.addPage();
@@ -159,7 +202,7 @@ export function ReportActions({ url, report, summary }: ReportActionsProps) {
             doc.setFontSize(10);
             const contentLines = doc.splitTextToSize(content.replace(/<br\s*\/?>/gi, '\n'), maxLineWidth);
             doc.text(contentLines, margin, y, { lineHeightFactor: lineSpacing });
-            y += (contentLines.length * 5 * lineSpacing) + 8;
+            y += (contentLines.length * 4 * lineSpacing) + 4; // Adjusted spacing
         }
 
         doc.save(`VulnScan-Report-${new URL(url).hostname}.pdf`);
