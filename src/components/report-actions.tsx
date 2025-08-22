@@ -21,8 +21,9 @@ export function ReportActions({ url, report, summary }: ReportActionsProps) {
     const handleDownload = () => {
         const doc = new jsPDF();
         const pageWidth = doc.internal.pageSize.getWidth();
-        const margin = 15;
+        const margin = 25; // 2.5 cm
         const maxLineWidth = pageWidth - margin * 2;
+        const lineSpacing = 1.5;
 
         // Title
         doc.setFont('helvetica', 'bold');
@@ -45,8 +46,8 @@ export function ReportActions({ url, report, summary }: ReportActionsProps) {
         doc.setFontSize(10);
         doc.setFont('helvetica', 'normal');
         const summaryLines = doc.splitTextToSize(summary, maxLineWidth);
-        doc.text(summaryLines, margin, y);
-        y += summaryLines.length * 5 + 10;
+        doc.text(summaryLines, margin, y, { lineHeightFactor: lineSpacing });
+        y += (summaryLines.length * 5 * lineSpacing) + 10;
 
         // Separator
         doc.setDrawColor(200, 200, 200);
@@ -81,8 +82,8 @@ export function ReportActions({ url, report, summary }: ReportActionsProps) {
             doc.setFont('helvetica', 'normal');
             doc.setFontSize(10);
             const contentLines = doc.splitTextToSize(content.replace(/<br\s*\/?>/gi, '\n'), maxLineWidth);
-            doc.text(contentLines, margin, y);
-            y += contentLines.length * 5 + 8;
+            doc.text(contentLines, margin, y, { lineHeightFactor: lineSpacing });
+            y += (contentLines.length * 5 * lineSpacing) + 8;
         }
 
         doc.save(`VulnScan-Report-${new URL(url).hostname}.pdf`);
