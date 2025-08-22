@@ -48,9 +48,21 @@ function getSeverityInfo(title: string): { icon: React.ReactNode; variant: "dest
 }
 
 function ReportContent({ content }: { content: string }) {
-    let parsedData;
     try {
-        parsedData = JSON.parse(content);
+        const parsedData = JSON.parse(content);
+        // It is valid JSON, so format it as a key-value list.
+        return (
+            <div className="p-4 bg-muted rounded-md text-sm text-foreground">
+                <ul className="space-y-2 font-code">
+                    {Object.entries(parsedData).map(([key, value]) => (
+                        <li key={key} className="flex flex-col">
+                            <span className="font-semibold text-primary">{key}:</span>
+                            <span className="pl-4 text-foreground break-words">{String(value)}</span>
+                        </li>
+                    ))}
+                </ul>
+            </div>
+        );
     } catch (e) {
         // If it's not valid JSON, render as plain text.
         return (
@@ -59,20 +71,6 @@ function ReportContent({ content }: { content: string }) {
             </div>
         );
     }
-
-    // It is JSON, so we format it as a key-value list.
-    return (
-        <div className="p-4 bg-muted rounded-md text-sm text-foreground">
-            <ul className="space-y-2 font-code">
-                {Object.entries(parsedData).map(([key, value]) => (
-                    <li key={key} className="flex flex-col">
-                        <span className="font-semibold text-primary">{key}:</span>
-                        <span className="pl-4 text-foreground break-words">{String(value)}</span>
-                    </li>
-                ))}
-            </ul>
-        </div>
-    );
 }
 
 function FeedbackSuccessMessage() {
