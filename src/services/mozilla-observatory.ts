@@ -7,7 +7,7 @@ const RETRY_DELAY = 5000; // 5 seconds
 
 // Initiates a scan and returns the scan ID
 async function initiateScan(host: string): Promise<any> {
-    const response = await fetch(`${OBSERVATORY_API_URL}/scan?host=${host}`, {
+    const response = await fetch(`${OBSERVATORY_API_URL}/scan?host=${host}&hidden=true`, {
         method: 'POST',
     });
     if (!response.ok) {
@@ -70,7 +70,7 @@ export async function getMozillaObservatoryAnalysis(host: string): Promise<any> 
         
         // Handle immediate successful (cached) report
         if (initialResponse.state === 'FINISHED') {
-            console.log("Mozilla Observatory returned a cached report immediately.");
+            console.log("Mozilla Observatory returned a report immediately.");
             return initialResponse;
         }
 
