@@ -26,7 +26,6 @@ async function fetchWithApiKey(endpoint: string, options: RequestInit = {}) {
         
         if (!response.ok) {
             const errorText = await response.text();
-            console.error(`VirusTotal API Error (${response.status}): ${errorText}`);
             // Return a structured error instead of throwing.
             try {
                 // Try to parse the error from VirusTotal, which is usually JSON.
@@ -40,7 +39,6 @@ async function fetchWithApiKey(endpoint: string, options: RequestInit = {}) {
         
         return response.json();
     } catch(error: any) {
-        console.error('Error during fetchWithApiKey:', error);
         // Return a structured error for network or other unexpected issues.
         return { error: { message: `Failed to communicate with VirusTotal API: ${error.message}` } };
     }

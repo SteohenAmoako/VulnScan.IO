@@ -50,7 +50,7 @@ async function getScanResults(scanId: number): Promise<any> {
             }
             console.log(`Mozilla Observatory scan state: ${data.state}. Retrying...`);
         } catch (error: any) {
-             console.error('Error polling Mozilla Observatory:', error);
+             // Don't log here, let the main function handle it.
         }
     }
     return { error: 'Mozilla Observatory scan timed out after maximum retries.' };
@@ -76,7 +76,6 @@ export async function getMozillaObservatoryAnalysis(host: string): Promise<any> 
 
         const scanId = initialResponse?.scan_id;
         if (!scanId) {
-             console.error("Unexpected response from Mozilla Observatory:", initialResponse);
              return { error: 'No scan_id returned from Mozilla Observatory and no finished state or error was found.' };
         }
 
@@ -84,7 +83,6 @@ export async function getMozillaObservatoryAnalysis(host: string): Promise<any> 
         return await getScanResults(scanId);
         
     } catch (error: any) {
-        console.error('Error during getMozillaObservatoryAnalysis:', error);
         return { error: `Failed to get Mozilla Observatory report: ${error.message}` };
     }
 }
