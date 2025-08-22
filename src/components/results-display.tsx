@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
@@ -90,17 +90,25 @@ export function ResultsDisplay({ url, report, summary }: ResultsDisplayProps) {
     const reportSections = parseReport(report);
     const searchParams = useSearchParams();
     const { toast } = useToast();
-    const showFeedbackSuccess = searchParams.get('feedback_submitted') === 'true';
+    
+    const [isFeedbackVisible, setIsFeedbackVisible] = useState(searchParams.get('feedback_submitted') === 'true');
 
     useEffect(() => {
-        if (showFeedbackSuccess) {
+        if (isFeedbackVisible) {
             toast({
                 title: "Feedback Submitted",
                 description: "Thank you for helping us improve our scanner.",
                 variant: "default"
-            })
+            });
+
+            const timer = setTimeout(() => {
+                setIsFeedbackVisible(false);
+            }, 120000); // 2 minutes in milliseconds
+
+            // Cleanup the timer if the component unmounts
+            return () => clearTimeout(timer);
         }
-    }, [showFeedbackSuccess, toast]);
+    }, [isFeedbackVisible, toast]);
 
 
     return (
@@ -112,9 +120,9 @@ export function ResultsDisplay({ url, report, summary }: ResultsDisplayProps) {
                 </p>
             </div>
             
-            <ReportActions url={url} report={report} summary={summary} showFeedbackSuccess={showFeedbackSuccess} />
+            <ReportActions url={url} report={report} summary={summary} showFeedbackSuccess={isFeedbackVisible} />
 
-            {showFeedbackSuccess && <FeedbackSuccessMessage />}
+            {isFeedbackVisible && <FeedbackSuccessMessage />}
 
             <Card>
                 <CardHeader>
