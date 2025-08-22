@@ -7,6 +7,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Download, Repeat, Search, MessageSquareWarning } from 'lucide-react';
 import Link from 'next/link';
 import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
 
 interface ReportActionsProps {
     url: string;
@@ -18,7 +19,24 @@ export function ReportActions({ url, report, summary }: ReportActionsProps) {
     const router = useRouter();
     const { toast } = useToast();
 
-    const handleDownload = () => {
+    const handleDownload = async () => {
+        const severityChartElement = document.getElementById('severity-chart-card');
+        const mozillaChartElement = document.getElementById('mozilla-chart-card');
+        
+        if (!severityChartElement || !mozillaChartElement) {
+            toast({
+                title: "Error",
+                description: "Could not find chart elements to generate PDF.",
+                variant: "destructive"
+            });
+            return;
+        }
+
+        const severityCanvas = await html2canvas(severityChartElement, { backgroundColor: null });
+        const mozillaCanvas = await html2canvas(mozillaChartElement, { backgroundColor: null });
+        const severityImgData = severityCanvas.toDataURL('image/png');
+        const mozillaImgData = mozillaCanvas.toDataURL('image/png');
+
         const doc = new jsPDF();
         const pageWidth = doc.internal.pageSize.getWidth();
         const margin = 25; // 2.5 cm
@@ -48,6 +66,25 @@ export function ReportActions({ url, report, summary }: ReportActionsProps) {
         const summaryLines = doc.splitTextToSize(summary, maxLineWidth);
         doc.text(summaryLines, margin, y, { lineHeightFactor: lineSpacing });
         y += (summaryLines.length * 5 * lineSpacing) + 10;
+        
+        if (y > 250) { 
+            doc.addPage();
+            y = 20;
+        }
+
+        // Charts section
+        doc.setFontSize(14);
+        doc.setFont('helvetica', 'bold');
+        doc.text('Visual Summaries', margin, y);
+        y += 10;
+        
+        const chartWidth = (pageWidth - (margin * 3)) / 2;
+        const severityImgHeight = (severityCanvas.height * chartWidth) / severityCanvas.width;
+        const mozillaImgHeight = (mozillaCanvas.height * chartWidth) / mozillaCanvas.width;
+
+        doc.addImage(severityImgData, 'PNG', margin, y, chartWidth, severityImgHeight);
+        doc.addImage(mozillaImgData, 'PNG', margin + chartWidth + 10, y, chartWidth, mozillaImgHeight);
+        y += Math.max(severityImgHeight, mozillaImgHeight) + 10;
 
         // Separator
         doc.setDrawColor(200, 200, 200);

@@ -16,7 +16,7 @@ export function SeverityChart({ data }: SeverityChartProps) {
     const chartData = data.filter(d => d.name !== 'Secure');
 
     return (
-        <Card className="sticky top-24">
+        <Card className="sticky top-24" id="severity-chart-card">
             <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                     <TrendingUp className="w-6 h-6 text-primary" />

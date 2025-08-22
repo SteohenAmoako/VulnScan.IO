@@ -97,7 +97,7 @@ export function URLDetails({ url, domainInfo, sslInfo, mozillaInfo, urlParamAnal
                         )}
                     </CardContent>
                 </Card>
-                <Card className="lg:col-span-1 xl:col-span-2">
+                <Card className="lg:col-span-1 xl:col-span-2" id="mozilla-chart-card">
                     <CardHeader>
                         <CardTitle className="flex items-center gap-2">
                             <Microscope className="w-6 h-6 text-primary" />
