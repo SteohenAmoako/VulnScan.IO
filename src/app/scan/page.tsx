@@ -82,27 +82,6 @@ const MALICIOUS_PATTERNS = [
   { label: 'Encoded ../ (%2e%2e)', regex: /%2e%2e/i }
 ];
 
-const getMozillaGradeInfo = (grade: string | undefined) => {
-    if (!grade) return { variant: 'secondary' as const, description: 'The grade could not be determined.' };
-    switch (grade) {
-        case 'A+': return { variant: 'default' as const, description: 'It got the highest possible grade (A+). That means the website is configured with excellent security headers (like HSTS, CSP, X-Frame-Options, etc.).' };
-        case 'A':
-        case 'A-': 
-            return { variant: 'default' as const, description: 'This is a good grade. The website has implemented strong security headers, providing a solid defense against common web attacks.' };
-        case 'B+':
-        case 'B':
-        case 'B-': 
-            return { variant: 'secondary' as const, description: 'This is an average grade. The website is missing some important security headers, leaving it partially exposed to attacks like clickjacking or cross-site scripting.' };
-        case 'C+':
-        case 'C':
-        case 'C-': 
-            return { variant: 'destructive' as const, description: 'This grade indicates a significant lack of security headers. The website is likely vulnerable to a variety of common and easily preventable attacks.' };
-        case 'D': return { variant: 'destructive' as const, description: 'This grade is a cause for concern, indicating very poor security header configuration and high risk of attack.' };
-        case 'F': return { variant: 'destructive' as const, description: 'This is a failing grade. The website has made little to no effort to implement basic security headers, leaving it highly vulnerable.' };
-        default: return { variant: 'secondary' as const, description: 'An unrecognized grade was returned by the scan.' };
-    }
-};
-
 function analyzeUrlParameters(inputUrl: string) {
     try {
         const url = new URL(inputUrl);
@@ -145,6 +124,27 @@ function getStatsFromReport(report: string): { malicious: number; suspicious: nu
     return stats;
 }
 
+const getMozillaGradeInfo = (grade: string | undefined) => {
+    if (!grade) return { variant: 'secondary' as const, description: 'The grade could not be determined.' };
+    switch (grade) {
+        case 'A+': return { variant: 'default' as const, description: 'It got the highest possible grade (A+). That means the website is configured with excellent security headers (like HSTS, CSP, X-Frame-Options, etc.).' };
+        case 'A':
+        case 'A-': 
+            return { variant: 'default' as const, description: 'This is a good grade. The website has implemented strong security headers, providing a solid defense against common web attacks.' };
+        case 'B+':
+        case 'B':
+        case 'B-': 
+            return { variant: 'secondary' as const, description: 'This is an average grade. The website is missing some important security headers, leaving it partially exposed to attacks like clickjacking or cross-site scripting.' };
+        case 'C+':
+        case 'C':
+        case 'C-': 
+            return { variant: 'destructive' as const, description: 'This grade indicates a significant lack of security headers. The website is likely vulnerable to a variety of common and easily preventable attacks.' };
+        case 'D': return { variant: 'destructive' as const, description: 'This grade is a cause for concern, indicating very poor security header configuration and high risk of attack.' };
+        case 'F': return { variant: 'destructive' as const, description: 'This is a failing grade. The website has made little to no effort to implement basic security headers, leaving it highly vulnerable.' };
+        default: return { variant: 'secondary' as const, description: 'An unrecognized grade was returned by the scan.' };
+    }
+};
+
 
 async function ScanResults({ url }: { url: string }) {
   let decodedUrl: string;
@@ -180,7 +180,7 @@ async function ScanResults({ url }: { url: string }) {
     const mozillaGradeInfo = getMozillaGradeInfo(mozillaInfo?.grade);
     
     // Filter out NVD results that have no vulnerabilities
-    const relevantNvdResults = nvdResults.filter(r => r.totalResults > 0);
+    const relevantNvdResults = nvdResults.filter(r => r && r.totalResults > 0);
 
     // VirusTotal scan depends on the URL, other data can be passed to it
     const scanResult = await scanWebsite({ 
@@ -276,10 +276,14 @@ async function ScanResults({ url }: { url: string }) {
     );
   } catch (error: any) {
     let message = "We couldn't scan the provided URL. It might be offline, or an unexpected error occurred. Please try again later.";
-    if (error.message && error.message.includes('VIRUSTOTAL_API_KEY is not set')) {
+    const errorMessage = error.message || '';
+    
+    if (errorMessage.includes('VIRUSTOTAL_API_KEY is not set')) {
         message = "The VirusTotal API key is not configured. Please set the VIRUSTOTAL_API_KEY in your .env file to enable live scanning.";
-    } else if (error.message) {
-        message = `An unexpected error occurred: ${error.message}. Please try again later.`;
+    } else if (errorMessage.includes('429') || errorMessage.includes('quota')) {
+        message = "You have exceeded the API rate limit for one of the scanning services (e.g., Google AI). Please check your plan and billing details or wait for the quota to reset.";
+    } else if (errorMessage) {
+        message = `An unexpected error occurred: ${errorMessage}. Please try again later.`;
     }
     return <ErrorState message={message} />;
   }
