@@ -5,7 +5,7 @@ import * as React from 'react';
 import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { TrendingUp, BarChart2 } from 'lucide-react';
+import { TrendingUp, BarChart2, PieChart as PieChartIcon } from 'lucide-react';
 
 interface SeverityChartProps {
     data: { name: string; value: number; fill: string }[];
@@ -30,7 +30,7 @@ export function SeverityChart({ data }: SeverityChartProps) {
                 {hasData ? (
                    <Tabs defaultValue="pie" className="w-full">
                         <TabsList className="grid w-full grid-cols-2">
-                            <TabsTrigger value="pie"><PieChart className="w-4 h-4 mr-2" />Donut</TabsTrigger>
+                            <TabsTrigger value="pie"><PieChartIcon className="w-4 h-4 mr-2" />Donut</TabsTrigger>
                             <TabsTrigger value="bar"><BarChart2 className="w-4 h-4 mr-2" />Bar</TabsTrigger>
                         </TabsList>
                         <TabsContent value="pie">

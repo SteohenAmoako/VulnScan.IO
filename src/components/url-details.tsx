@@ -2,11 +2,12 @@
 'use client';
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { CheckCircle2, AlertTriangle, ShieldCheck, Search, Info, Lock, Microscope } from "lucide-react";
+import { CheckCircle2, AlertTriangle, ShieldCheck, Info, Lock, Microscope } from "lucide-react";
 import type { DomainInfo } from "@/ai/flows/get-domain-info";
 import type { SslLabsInfo } from "@/ai/flows/get-ssl-info";
 import type { MozillaObservatoryInfo } from "@/ai/flows/get-mozilla-observatory-info";
 import { Badge } from "@/components/ui/badge";
+import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts';
 
 
 interface URLDetailsProps {
@@ -41,11 +42,16 @@ const getMozillaGradeVariant = (grade: string | undefined) => {
 
 export function URLDetails({ url, domainInfo, sslInfo, mozillaInfo, urlParamAnalysis }: URLDetailsProps) {
     const isHttps = new URL(url).protocol === 'https:';
-    const { hasParams, findings } = urlParamAnalysis;
+
+    const mozillaScore = mozillaInfo?.score ?? 0;
+    const mozillaChartData = [
+        { name: 'Score', value: mozillaScore, fill: 'hsl(var(--primary))' },
+        { name: 'Remaining', value: Math.max(100 - mozillaScore, 0), fill: 'hsl(var(--muted))' }
+    ];
 
     return (
         <div className="container px-4 md:px-6 py-12">
-            <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-4">
                 <Card>
                     <CardHeader>
                         <CardTitle className="flex items-center gap-2">
@@ -95,7 +101,7 @@ export function URLDetails({ url, domainInfo, sslInfo, mozillaInfo, urlParamAnal
                         )}
                     </CardContent>
                 </Card>
-                <Card>
+                <Card className="lg:col-span-1 xl:col-span-2">
                     <CardHeader>
                         <CardTitle className="flex items-center gap-2">
                             <Microscope className="w-6 h-6 text-primary" />
@@ -104,14 +110,41 @@ export function URLDetails({ url, domainInfo, sslInfo, mozillaInfo, urlParamAnal
                     </CardHeader>
                     <CardContent>
                         {mozillaInfo && !mozillaInfo.error ? (
-                             <div className="space-y-2">
-                                <div className="flex items-center gap-2">
-                                    <span className="font-semibold">Grade:</span>
-                                    <Badge variant={getMozillaGradeVariant(mozillaInfo.grade)}>{mozillaInfo.grade || 'N/A'}</Badge>
+                            <div className="grid grid-cols-2 gap-4 items-center">
+                                <div className="space-y-2">
+                                    <div className="flex items-center gap-2">
+                                        <span className="font-semibold">Grade:</span>
+                                        <Badge variant={getMozillaGradeVariant(mozillaInfo.grade)}>{mozillaInfo.grade || 'N/A'}</Badge>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <span className="font-semibold">Score:</span>
+                                        <span className="font-bold">{mozillaInfo.score} / 100</span>
+                                    </div>
                                 </div>
-                                <div className="flex items-center gap-2">
-                                    <span className="font-semibold">Score:</span>
-                                    <span className="font-bold">{mozillaInfo.score} / 100</span>
+                                <div className="w-full h-24">
+                                     <ResponsiveContainer width="100%" height="100%">
+                                        <PieChart>
+                                            <Pie
+                                                data={mozillaChartData}
+                                                cx="50%"
+                                                cy="50%"
+                                                labelLine={false}
+                                                innerRadius={25}
+                                                outerRadius={40}
+                                                paddingAngle={2}
+                                                dataKey="value"
+                                            >
+                                                {mozillaChartData.map((entry, index) => (
+                                                    <Cell key={`cell-${index}`} fill={entry.fill} />
+                                                ))}
+                                            </Pie>
+                                            <Tooltip
+                                                cursor={{ fill: 'transparent' }}
+                                                contentStyle={{ backgroundColor: 'hsl(var(--background))', border: '1px solid hsl(var(--border))', borderRadius: 'var(--radius)'}}
+                                                formatter={(value, name) => [value, name]}
+                                            />
+                                        </PieChart>
+                                    </ResponsiveContainer>
                                 </div>
                             </div>
                         ) : (
