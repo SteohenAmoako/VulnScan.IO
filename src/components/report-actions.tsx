@@ -1,13 +1,16 @@
 
 'use client';
 
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { Download, Repeat, Search, MessageSquareWarning } from 'lucide-react';
+import { Download, Repeat, Search, MessageSquareWarning, Send } from 'lucide-react';
 import Link from 'next/link';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
+import { Textarea } from '@/components/ui/textarea';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 interface ReportActionsProps {
     url: string;
@@ -15,9 +18,81 @@ interface ReportActionsProps {
     summary: string;
 }
 
+function ReportFeedback({ url, summary }: { url: string, summary: string }) {
+    const [feedback, setFeedback] = useState('');
+    const { toast } = useToast();
+
+    const handleSubmitFeedback = () => {
+        if (feedback.trim().length < 10) {
+            toast({
+                title: "Feedback is too short",
+                description: "Please provide a more detailed explanation.",
+                variant: "destructive",
+            });
+            return;
+        }
+
+        const recipient = 'stevekobbi20@gmail.com';
+        const subject = `Incorrect Scan Report for ${url}`;
+        const body = `
+FEEDBACK:
+${feedback}
+
+-----------------------------------
+        SCAN DETAILS (for context)
+-----------------------------------
+
+Scanned URL: ${url}
+
+AI Summary:
+${summary}
+        `;
+        
+        const mailtoLink = `mailto:${recipient}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+        
+        try {
+             window.location.href = mailtoLink;
+             toast({
+                title: "Thank You!",
+                description: "Your email client has been opened to send your feedback.",
+            });
+        } catch (error) {
+            toast({
+                title: "Could not open email client",
+                description: "Please copy your feedback and send it manually.",
+                variant: "destructive"
+            });
+        }
+    };
+
+    return (
+        <Card className="mt-6 border-destructive/50">
+            <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-destructive">
+                    <MessageSquareWarning className="w-6 h-6" />
+                    Report Incorrect Results
+                </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+                <Textarea
+                    placeholder="Please tell us what's wrong with the report..."
+                    value={feedback}
+                    onChange={(e) => setFeedback(e.target.value)}
+                    rows={4}
+                />
+                <Button onClick={handleSubmitFeedback} variant="destructive">
+                    <Send className="mr-2 h-4 w-4" />
+                    Submit Feedback via Email
+                </Button>
+            </CardContent>
+        </Card>
+    )
+}
+
 export function ReportActions({ url, report, summary }: ReportActionsProps) {
     const router = useRouter();
     const { toast } = useToast();
+    const [isReporting, setIsReporting] = useState(false);
 
     const handleDownload = async () => {
         const severityChartElement = document.getElementById('severity-chart-card');
@@ -39,11 +114,10 @@ export function ReportActions({ url, report, summary }: ReportActionsProps) {
 
         const doc = new jsPDF();
         const pageWidth = doc.internal.pageSize.getWidth();
-        const margin = 25; // 2.5 cm
+        const margin = 25;
         const maxLineWidth = pageWidth - margin * 2;
         const lineSpacing = 1.5;
 
-        // Title
         doc.setFont('helvetica', 'bold');
         doc.setFontSize(18);
         doc.text(`Vulnerability Scan Report`, pageWidth / 2, 20, { align: 'center' });
@@ -55,7 +129,6 @@ export function ReportActions({ url, report, summary }: ReportActionsProps) {
 
         let y = 50;
 
-        // AI Summary Section
         doc.setFontSize(14);
         doc.setFont('helvetica', 'bold');
         doc.text('AI-Generated Summary', margin, y);
@@ -72,7 +145,6 @@ export function ReportActions({ url, report, summary }: ReportActionsProps) {
             y = 20;
         }
 
-        // Charts section
         doc.setFontSize(14);
         doc.setFont('helvetica', 'bold');
         doc.text('Visual Summaries', margin, y);
@@ -86,12 +158,10 @@ export function ReportActions({ url, report, summary }: ReportActionsProps) {
         doc.addImage(mozillaImgData, 'PNG', margin + chartWidth + 10, y, chartWidth, mozillaImgHeight);
         y += Math.max(severityImgHeight, mozillaImgHeight) + 10;
 
-        // Separator
         doc.setDrawColor(200, 200, 200);
         doc.line(margin, y, pageWidth - margin, y);
         y += 10;
         
-        // Detailed Report Section
         doc.setFontSize(14);
         doc.setFont('helvetica', 'bold');
         doc.text('Detailed Vulnerability Report', margin, y);
@@ -100,13 +170,12 @@ export function ReportActions({ url, report, summary }: ReportActionsProps) {
         doc.setFont('helvetica', 'normal');
         doc.setFontSize(10);
 
-        // Simple parsing of the report text
         const sections = report.split('**').map(s => s.trim()).filter(Boolean);
         for (let i = 0; i < sections.length; i += 2) {
             const title = sections[i].replace(/:$/, '');
             const content = sections[i + 1] || 'No details provided.';
 
-            if (y > 270) { // Check for page break
+            if (y > 270) {
                 doc.addPage();
                 y = 20;
             }
@@ -127,66 +196,33 @@ export function ReportActions({ url, report, summary }: ReportActionsProps) {
     };
     
     const handleRescan = () => {
-        // Add a random query param to force a full reload, triggering Suspense
         const randomQuery = `&t=${new Date().getTime()}`;
         router.push(`/scan?url=${encodeURIComponent(url)}${randomQuery}`);
     };
-    
-    const handleReportIncorrect = () => {
-        const recipient = 'stevekobbi20@gmail.com';
-        const subject = `Incorrect Scan Report for ${url}`;
-        const body = `
-Please provide your feedback below on what was incorrect about the scan results.
-Your detailed feedback is crucial for improving the accuracy of our scanner.
-
-[** YOUR FEEDBACK HERE **]
-
-
-
------------------------------------
-        SCAN DETAILS (for context)
------------------------------------
-
-Scanned URL: ${url}
-
-AI Summary:
-${summary}
-
-Full Report:
-${report.replace(/\*\*/g, '')}
-        `;
-        
-        const mailtoLink = `mailto:${recipient}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-        
-        // Open the user's default email client
-        window.location.href = mailtoLink;
-
-        toast({
-            title: "Report Submitted",
-            description: "Thank you! Your email client has been opened to send the report.",
-        });
-    };
 
     return (
-        <div className="flex flex-wrap items-center justify-center gap-4">
-            <Button asChild variant="outline">
-                <Link href="/">
-                    <Search className="mr-2 h-4 w-4" />
-                    New Scan
-                </Link>
-            </Button>
-            <Button variant="outline" onClick={handleRescan}>
-                <Repeat className="mr-2 h-4 w-4" />
-                Rescan
-            </Button>
-             <Button variant="outline" onClick={handleDownload}>
-                <Download className="mr-2 h-4 w-4" />
-                Download Report (PDF)
-            </Button>
-            <Button variant="destructive" onClick={handleReportIncorrect}>
-                <MessageSquareWarning className="mr-2 h-4 w-4" />
-                Report Incorrect Results
-            </Button>
+        <div className="flex flex-col items-center gap-4">
+            <div className="flex flex-wrap items-center justify-center gap-4">
+                <Button asChild variant="outline">
+                    <Link href="/">
+                        <Search className="mr-2 h-4 w-4" />
+                        New Scan
+                    </Link>
+                </Button>
+                <Button variant="outline" onClick={handleRescan}>
+                    <Repeat className="mr-2 h-4 w-4" />
+                    Rescan
+                </Button>
+                <Button variant="outline" onClick={handleDownload}>
+                    <Download className="mr-2 h-4 w-4" />
+                    Download Report (PDF)
+                </Button>
+                <Button variant="destructive" onClick={() => setIsReporting(!isReporting)}>
+                    <MessageSquareWarning className="mr-2 h-4 w-4" />
+                    {isReporting ? 'Cancel Feedback' : 'Report Incorrect Results'}
+                </Button>
+            </div>
+            {isReporting && <ReportFeedback url={url} summary={summary} />}
         </div>
     );
 }
