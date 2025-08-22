@@ -7,7 +7,6 @@ const RETRY_DELAY = 5000; // 5 seconds
 
 // Initiates a scan and returns the scan ID
 async function initiateScan(host: string): Promise<any> {
-    console.log(host)
     try {
         const response = await fetch(`${OBSERVATORY_API_URL}/scan?host=${host}`, {
             method: 'POST',
@@ -16,7 +15,12 @@ async function initiateScan(host: string): Promise<any> {
             const errorText = await response.text();
             throw new Error(`Mozilla Observatory API initiate scan failed with status ${response.status}: ${errorText}`);
         }
-        return response.json();
+        const text = await response.text();
+        // The API might return an empty response in some cases, so we check for that.
+        if (!text) {
+          return {};
+        }
+        return JSON.parse(text);
     } catch (error: any) {
         console.error('Error during initiateScan:', error);
         throw new Error(`Failed to initiate Mozilla Observatory scan: ${error.message}`);
@@ -30,7 +34,6 @@ async function getScanResults(scanId: number): Promise<any> {
             await new Promise(resolve => setTimeout(resolve, RETRY_DELAY));
             const response = await fetch(`${OBSERVATORY_API_URL}/getScanResults?scan=${scanId}`);
             if (!response.ok) {
-                // Don't throw on non-200, as the scan might just not be ready.
                 console.warn(`Polling Mozilla Observatory: Status ${response.status}`);
                 continue;
             }
@@ -44,7 +47,6 @@ async function getScanResults(scanId: number): Promise<any> {
             console.log(`Mozilla Observatory scan state: ${data.state}. Retrying...`);
         } catch (error: any) {
              console.error('Error polling Mozilla Observatory:', error);
-             // Don't rethrow, just continue to the next retry
         }
     }
     throw new Error('Mozilla Observatory scan timed out after maximum retries.');
@@ -57,33 +59,27 @@ export async function getMozillaObservatoryAnalysis(host: string): Promise<any> 
     try {
         const initialResponse = await initiateScan(host);
 
-        // Handle cases where the API returns a finished report immediately (from cache)
         if (initialResponse && initialResponse.state === 'FINISHED') {
             console.log("Mozilla Observatory returned a cached report immediately.");
             return initialResponse;
         }
 
-        // Handle cases where the API returns an error immediately
         if (initialResponse && initialResponse.error) {
             console.error("Mozilla Observatory API returned an error on initiation:", initialResponse.error);
             return { error: initialResponse.error };
         }
         
-        // If we get here, we expect a scan_id to start polling
-        const scanId = initialResponse.scan_id;
+        const scanId = initialResponse?.scan_id;
         if (!scanId) {
-             // This can happen if the response is unexpected, e.g. an undocumented error format.
              console.error("Unexpected response from Mozilla Observatory:", initialResponse);
              throw new Error('No scan_id returned from Mozilla Observatory and no finished state or error was found.');
         }
 
         console.log(`Polling for Mozilla Observatory results for scan ID: ${scanId}`);
-        const report = await getScanResults(scanId);
+        return await getScanResults(scanId);
         
-        return report;
     } catch (error: any) {
         console.error('Error during getMozillaObservatoryAnalysis:', error);
-        // Return an error object that flows can handle gracefully
         return { error: `Failed to get Mozilla Observatory report: ${error.message}` };
     }
 }
