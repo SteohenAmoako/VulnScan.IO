@@ -5,7 +5,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { Download, Repeat, Search, MessageSquareWarning, Send, CheckCircle2 } from 'lucide-react';
+import { Download, Repeat, Search, MessageSquareWarning, Send } from 'lucide-react';
 import Link from 'next/link';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
@@ -16,49 +16,15 @@ interface ReportActionsProps {
     url: string;
     report: string;
     summary: string;
+    showFeedbackSuccess: boolean;
 }
 
 function ReportFeedback({ url, summary }: { url: string, summary: string }) {
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const [succeeded, setSucceeded] = useState(false);
-
-    const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
-        event.preventDefault();
-        setIsSubmitting(true);
-        
-        const formData = new FormData(event.currentTarget);
-        
-        try {
-            const response = await fetch("https://formsubmit.co/stevekobbi20@gmail.com", {
-                method: 'POST',
-                body: formData,
-                headers: {
-                    'Accept': 'application/json'
-                }
-            });
-
-            if (response.ok) {
-                setSucceeded(true);
-            } else {
-                 throw new Error('Form submission failed');
-            }
-        } catch (error) {
-            console.error(error);
-            // Optionally, show an error message to the user
-        } finally {
-            setIsSubmitting(false);
-        }
-    };
     
-    if (succeeded) {
-        return (
-            <div className="text-center p-4 mt-6 bg-green-100 dark:bg-green-900/50 border border-green-200 dark:border-green-800 rounded-lg">
-                <CheckCircle2 className="w-8 h-8 mx-auto text-green-600 dark:text-green-400 mb-2" />
-                <p className="font-semibold text-green-800 dark:text-green-200">Thank you for your feedback!</p>
-                <p className="text-sm text-green-700 dark:text-green-300">Your insights help improve the scanner.</p>
-            </div>
-        );
-    }
+    // Construct the URL to redirect back to, including the success flag
+    const nextUrl = new URL(window.location.href);
+    nextUrl.searchParams.set('feedback_submitted', 'true');
 
     return (
         <Card className="mt-6 border-destructive/50 w-full max-w-lg">
@@ -70,12 +36,19 @@ function ReportFeedback({ url, summary }: { url: string, summary: string }) {
             </CardHeader>
             <CardContent>
                 <form
-                    onSubmit={handleSubmit}
+                    action="https://formsubmit.co/stevekobbi20@gmail.com"
+                    method="POST"
+                    onSubmit={() => setIsSubmitting(true)}
                     className="space-y-4"
                 >
+                    {/* FormSubmit specific hidden inputs */}
                     <input type="hidden" name="_subject" value={`Feedback for Scan: ${url}`} />
+                    <input type="hidden" name="_next" value={nextUrl.toString()} />
+                    
+                    {/* Hidden fields with our data */}
                     <input type="hidden" name="Scanned URL" value={url} />
                     <input type="hidden" name="AI Summary" value={summary} />
+                    
                     <Textarea
                         id="feedback"
                         name="Feedback"
@@ -97,7 +70,7 @@ function ReportFeedback({ url, summary }: { url: string, summary: string }) {
     )
 }
 
-export function ReportActions({ url, report, summary }: ReportActionsProps) {
+export function ReportActions({ url, report, summary, showFeedbackSuccess }: ReportActionsProps) {
     const router = useRouter();
     const { toast } = useToast();
     const [isReporting, setIsReporting] = useState(false);
@@ -151,8 +124,8 @@ export function ReportActions({ url, report, summary }: ReportActionsProps) {
         doc.setFont('helvetica', 'normal');
         const summaryLines = doc.splitTextToSize(summary, maxLineWidth);
         doc.text(summaryLines, margin, y, { lineHeightFactor: lineSpacing });
-        y += (summaryLines.length * 4 * lineSpacing) + 5; // Adjusted spacing
-        
+        y += (summaryLines.length * 4 * lineSpacing) + 5;
+
         if (y > 250) { 
             doc.addPage();
             y = 20;
@@ -202,7 +175,7 @@ export function ReportActions({ url, report, summary }: ReportActionsProps) {
             doc.setFontSize(10);
             const contentLines = doc.splitTextToSize(content.replace(/<br\s*\/?>/gi, '\n'), maxLineWidth);
             doc.text(contentLines, margin, y, { lineHeightFactor: lineSpacing });
-            y += (contentLines.length * 4 * lineSpacing) + 4; // Adjusted spacing
+            y += (contentLines.length * 4 * lineSpacing) + 4;
         }
 
         doc.save(`VulnScan-Report-${new URL(url).hostname}.pdf`);
@@ -230,12 +203,14 @@ export function ReportActions({ url, report, summary }: ReportActionsProps) {
                     <Download className="mr-2 h-4 w-4" />
                     Download Report (PDF)
                 </Button>
-                <Button variant="destructive" onClick={() => setIsReporting(!isReporting)}>
-                    <MessageSquareWarning className="mr-2 h-4 w-4" />
-                    {isReporting ? 'Cancel Feedback' : 'Report Incorrect Results'}
-                </Button>
+                {!showFeedbackSuccess && (
+                     <Button variant="destructive" onClick={() => setIsReporting(!isReporting)}>
+                        <MessageSquareWarning className="mr-2 h-4 w-4" />
+                        {isReporting ? 'Cancel Feedback' : 'Report Incorrect Results'}
+                    </Button>
+                )}
             </div>
-            {isReporting && <ReportFeedback url={url} summary={summary} />}
+            {isReporting && !showFeedbackSuccess && <ReportFeedback url={url} summary={summary} />}
         </div>
     );
 }

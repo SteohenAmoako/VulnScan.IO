@@ -1,11 +1,14 @@
 
 'use client';
 
+import { useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { AlertCircle, CheckCircle2, ShieldQuestion, FileText, Bot } from 'lucide-react';
 import { Badge } from "@/components/ui/badge";
 import { ReportActions } from "./report-actions";
+import { useToast } from '@/hooks/use-toast';
 
 interface ResultsDisplayProps {
     url: string;
@@ -72,8 +75,33 @@ function ReportContent({ content }: { content: string }) {
     );
 }
 
+function FeedbackSuccessMessage() {
+     return (
+        <div className="text-center p-4 my-6 bg-green-100 dark:bg-green-900/50 border border-green-200 dark:border-green-800 rounded-lg">
+            <CheckCircle2 className="w-8 h-8 mx-auto text-green-600 dark:text-green-400 mb-2" />
+            <p className="font-semibold text-green-800 dark:text-green-200">Thank you for your feedback!</p>
+            <p className="text-sm text-green-700 dark:text-green-300">Your insights help improve the scanner.</p>
+        </div>
+    );
+}
+
+
 export function ResultsDisplay({ url, report, summary }: ResultsDisplayProps) {
     const reportSections = parseReport(report);
+    const searchParams = useSearchParams();
+    const { toast } = useToast();
+    const showFeedbackSuccess = searchParams.get('feedback_submitted') === 'true';
+
+    useEffect(() => {
+        if (showFeedbackSuccess) {
+            toast({
+                title: "Feedback Submitted",
+                description: "Thank you for helping us improve our scanner.",
+                variant: "default"
+            })
+        }
+    }, [showFeedbackSuccess, toast]);
+
 
     return (
         <div className="space-y-8">
@@ -84,7 +112,9 @@ export function ResultsDisplay({ url, report, summary }: ResultsDisplayProps) {
                 </p>
             </div>
             
-            <ReportActions url={url} report={report} summary={summary} />
+            <ReportActions url={url} report={report} summary={summary} showFeedbackSuccess={showFeedbackSuccess} />
+
+            {showFeedbackSuccess && <FeedbackSuccessMessage />}
 
             <Card>
                 <CardHeader>
