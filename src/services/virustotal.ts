@@ -8,7 +8,7 @@ const cache = new Map<string, any>();
 async function fetchWithApiKey(endpoint: string, options: RequestInit = {}) {
     const apiKey = process.env.VIRUSTOTAL_API_KEY;
     if (!apiKey) {
-        throw new Error('VIRUSTOTAL_API_KEY is not set in the environment variables.');
+        return { error: { message: 'VIRUSTOTAL_API_KEY is not set in the environment variables.' } };
     }
 
     const headers = {
@@ -17,8 +17,6 @@ async function fetchWithApiKey(endpoint: string, options: RequestInit = {}) {
         'Accept': 'application/json'
     };
     
-    // The VirusTotal API for submitting a URL for analysis requires a 'application/x-www-form-urlencoded' Content-Type
-    // but the GET request for the report does not.
     if (options.method === 'POST') {
         (headers as any)['Content-Type'] = 'application/x-www-form-urlencoded';
     }
@@ -29,27 +27,38 @@ async function fetchWithApiKey(endpoint: string, options: RequestInit = {}) {
         if (!response.ok) {
             const errorText = await response.text();
             console.error(`VirusTotal API Error (${response.status}): ${errorText}`);
-            // Throw a more informative error.
-            throw new Error(`VirusTotal API request failed with status ${response.status}: ${errorText}`);
+            // Return a structured error instead of throwing.
+            try {
+                // Try to parse the error from VirusTotal, which is usually JSON.
+                const errorJson = JSON.parse(errorText);
+                return { error: { message: errorJson.error.message || `VirusTotal API request failed with status ${response.status}`, code: errorJson.error.code }};
+            } catch {
+                // If parsing fails, return a generic error.
+                return { error: { message: `VirusTotal API request failed with status ${response.status}: ${errorText}` } };
+            }
         }
         
         return response.json();
     } catch(error: any) {
         console.error('Error during fetchWithApiKey:', error);
-        // Re-throw the error to be caught by the calling function.
-        throw new Error(`Failed to communicate with VirusTotal API: ${error.message}`);
+        // Return a structured error for network or other unexpected issues.
+        return { error: { message: `Failed to communicate with VirusTotal API: ${error.message}` } };
     }
 }
 
-// Submits a URL for analysis and returns the analysis ID.
-async function submitUrlForAnalysis(url: string): Promise<string> {
+// Submits a URL for analysis and returns the analysis ID or an error.
+async function submitUrlForAnalysis(url: string): Promise<{analysisId?: string, error?: any}> {
     const response: any = await fetchWithApiKey('/urls', {
         method: 'POST',
         body: `url=${encodeURIComponent(url)}`,
     });
-    // The ID for the analysis is what we need to fetch the report later.
+    
+    if (response.error) {
+        return { error: response.error };
+    }
+
     const analysisId = response.data.id;
-    return analysisId;
+    return { analysisId };
 }
 
 // Retrieves the full analysis report for a given analysis ID
@@ -65,18 +74,26 @@ export async function getUrlAnalysis(url: string) {
     }
     
     console.log("Requesting new VirusTotal scan for:", url);
-    const analysisId = await submitUrlForAnalysis(url);
+    const { analysisId, error: submitError } = await submitUrlForAnalysis(url);
+
+    if (submitError) {
+        return { error: submitError };
+    }
+    
+    if (!analysisId) {
+        return { error: { message: 'No analysis ID returned from VirusTotal.'} };
+    }
 
     // VirusTotal needs a few seconds to process the URL.
-    // In a production app, you might implement a polling mechanism.
-    // For this educational app, a simple delay is sufficient.
     console.log(`Waiting for VirusTotal to analyze... (ID: ${analysisId})`);
-    await new Promise(resolve => setTimeout(resolve, 15000)); // Increased delay for better reliability
+    await new Promise(resolve => setTimeout(resolve, 15000));
 
     console.log("Fetching VirusTotal report for:", url);
     const report = await getUrlAnalysisReport(analysisId);
     
-    cache.set(url, report);
+    if (!report.error) {
+        cache.set(url, report);
+    }
     
     return report;
 }
