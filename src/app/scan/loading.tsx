@@ -12,7 +12,13 @@ export default function Loading() {
             </div>
         </div>
         <h1 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl font-headline">Scanning in Progress...</h1>
-        <p className="text-muted-foreground md:text-xl mt-2">Analyzing your website for vulnerabilities. Please wait.</p>
+        <p className="text-muted-foreground md:text-xl mt-2">Analyzing your website for vulnerabilities. This may take a minute.</p>
+      </div>
+      <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 animate-pulse mb-8">
+          <Skeleton className="h-40 w-full" />
+          <Skeleton className="h-40 w-full" />
+          <Skeleton className="h-40 w-full" />
+          <Skeleton className="h-40 w-full" />
       </div>
       <div className="grid gap-8 lg:grid-cols-3 animate-pulse">
         <div className="lg:col-span-2 space-y-8">

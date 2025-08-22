@@ -5,6 +5,7 @@ import { scanWebsite } from '@/ai/flows/scan-website-vulnerability';
 import { summarizeVulnerabilityReport } from '@/ai/flows/summarize-vulnerability-report';
 import { getDomainInfo } from '@/ai/flows/get-domain-info';
 import { getSslInfo } from '@/ai/flows/get-ssl-info';
+import { getMozillaObservatoryInfo } from '@/ai/flows/get-mozilla-observatory-info';
 import { Header } from '@/components/header';
 import { Footer } from '@/components/footer';
 import { ResultsDisplay } from '@/components/results-display';
@@ -144,13 +145,14 @@ async function ScanResults({ url }: { url: string }) {
     const urlParamAnalysis = analyzeUrlParameters(decodedUrl);
     
     // Fetch all data in parallel
-    const [domainInfo, sslInfo] = await Promise.all([
+    const [domainInfo, sslInfo, mozillaInfo] = await Promise.all([
         getDomainInfo({ domain }),
         isHttps ? getSslInfo({ host: domain }) : Promise.resolve(null),
+        getMozillaObservatoryInfo({ host: domain }),
     ]);
     
     // VirusTotal scan depends on the URL, other data can be passed to it
-    const scanResult = await scanWebsite({ url: decodedUrl, sslInfo: sslInfo ?? undefined });
+    const scanResult = await scanWebsite({ url: decodedUrl, sslInfo: sslInfo ?? undefined, mozillaInfo: mozillaInfo ?? undefined });
 
     // Now, create the summary with all the data gathered
     const summaryContext = {
@@ -158,6 +160,7 @@ async function ScanResults({ url }: { url: string }) {
         isHttps,
         urlParamFindings: urlParamAnalysis.findings,
         sslInfo: sslInfo ?? undefined,
+        mozillaInfo: mozillaInfo ?? undefined,
     };
 
     const summaryResult = await summarizeVulnerabilityReport(summaryContext);
@@ -183,6 +186,16 @@ async function ScanResults({ url }: { url: string }) {
             highSeverity += 1; // F, T, etc.
         }
     }
+    
+    if (mozillaInfo && !mozillaInfo.error && mozillaInfo.grade) {
+        if (['A+', 'A', 'A-'].includes(mozillaInfo.grade)) {
+            // Good grade
+        } else if (['B+', 'B', 'B-'].includes(mozillaInfo.grade)) {
+            mediumSeverity +=1;
+        } else { // C, D, F grades
+            highSeverity +=1;
+        }
+    }
 
 
     if (domainInfo && !domainInfo.error && (domainInfo.domain_age || domainInfo.registrar)) {
@@ -202,7 +215,7 @@ async function ScanResults({ url }: { url: string }) {
 
     return (
       <>
-        <URLDetails url={decodedUrl} domainInfo={domainInfo} urlParamAnalysis={urlParamAnalysis} sslInfo={sslInfo} />
+        <URLDetails url={decodedUrl} domainInfo={domainInfo} urlParamAnalysis={urlParamAnalysis} sslInfo={sslInfo} mozillaInfo={mozillaInfo} />
         <div className="container px-4 md:px-6 py-12">
             <div className="grid gap-8 lg:grid-cols-3">
                 <div className="lg:col-span-2">

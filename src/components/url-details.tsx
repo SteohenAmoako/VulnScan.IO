@@ -2,9 +2,10 @@
 'use client';
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { CheckCircle2, AlertTriangle, ShieldCheck, Search, Info, Lock } from "lucide-react";
+import { CheckCircle2, AlertTriangle, ShieldCheck, Search, Info, Lock, Microscope } from "lucide-react";
 import type { DomainInfo } from "@/ai/flows/get-domain-info";
 import type { SslLabsInfo } from "@/ai/flows/get-ssl-info";
+import type { MozillaObservatoryInfo } from "@/ai/flows/get-mozilla-observatory-info";
 import { Badge } from "@/components/ui/badge";
 
 
@@ -12,6 +13,7 @@ interface URLDetailsProps {
     url: string;
     domainInfo: DomainInfo | null;
     sslInfo: SslLabsInfo | null;
+    mozillaInfo: MozillaObservatoryInfo | null;
     urlParamAnalysis: {
         hasParams: boolean;
         findings: {
@@ -22,20 +24,28 @@ interface URLDetailsProps {
     }
 }
 
-const getGradeVariant = (grade: string | undefined) => {
+const getSslGradeVariant = (grade: string | undefined) => {
     if (!grade) return 'secondary';
     if (['A+', 'A'].includes(grade)) return 'default';
     if (['B', 'C'].includes(grade)) return 'secondary';
     return 'destructive';
 }
 
-export function URLDetails({ url, domainInfo, sslInfo, urlParamAnalysis }: URLDetailsProps) {
+const getMozillaGradeVariant = (grade: string | undefined) => {
+    if (!grade) return 'secondary';
+    if (['A+', 'A', 'A-'].includes(grade)) return 'default';
+    if (['B+', 'B', 'B-'].includes(grade)) return 'secondary';
+    return 'destructive';
+};
+
+
+export function URLDetails({ url, domainInfo, sslInfo, mozillaInfo, urlParamAnalysis }: URLDetailsProps) {
     const isHttps = new URL(url).protocol === 'https:';
     const { hasParams, findings } = urlParamAnalysis;
 
     return (
         <div className="container px-4 md:px-6 py-12">
-            <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-4">
+            <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                 <Card>
                     <CardHeader>
                         <CardTitle className="flex items-center gap-2">
@@ -69,7 +79,7 @@ export function URLDetails({ url, domainInfo, sslInfo, urlParamAnalysis }: URLDe
                              <div className="space-y-2">
                                 <div className="flex items-center gap-2">
                                     <span className="font-semibold">Grade:</span>
-                                    <Badge variant={getGradeVariant(sslInfo.grade)}>{sslInfo.grade || 'N/A'}</Badge>
+                                    <Badge variant={getSslGradeVariant(sslInfo.grade)}>{sslInfo.grade || 'N/A'}</Badge>
                                 </div>
                                 {sslInfo.protocols && sslInfo.protocols.length > 0 && (
                                     <div>
@@ -88,37 +98,24 @@ export function URLDetails({ url, domainInfo, sslInfo, urlParamAnalysis }: URLDe
                 <Card>
                     <CardHeader>
                         <CardTitle className="flex items-center gap-2">
-                            <Search className="w-6 h-6 text-primary" />
-                            URL Parameter Analysis
+                            <Microscope className="w-6 h-6 text-primary" />
+                            Mozilla Observatory
                         </CardTitle>
                     </CardHeader>
                     <CardContent>
-                        {!hasParams ? (
-                            <div className="flex items-center gap-2 text-muted-foreground">
-                                <CheckCircle2 className="w-5 h-5" />
-                                <span>No URL parameters to analyze.</span>
+                        {mozillaInfo && !mozillaInfo.error ? (
+                             <div className="space-y-2">
+                                <div className="flex items-center gap-2">
+                                    <span className="font-semibold">Grade:</span>
+                                    <Badge variant={getMozillaGradeVariant(mozillaInfo.grade)}>{mozillaInfo.grade || 'N/A'}</Badge>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <span className="font-semibold">Score:</span>
+                                    <span className="font-bold">{mozillaInfo.score} / 100</span>
+                                </div>
                             </div>
                         ) : (
-                            <ul className="space-y-2 text-sm max-h-40 overflow-y-auto">
-                                {findings.map(({ key, value, matches }, index) => (
-                                    <li key={index} className="flex flex-col">
-                                        <div>
-                                            <strong className="font-semibold">{key}:</strong> <code className="text-muted-foreground break-all">{value}</code>
-                                        </div>
-                                        {matches.length > 0 ? (
-                                            <div className="flex items-center gap-2 text-destructive">
-                                                <AlertTriangle className="w-4 h-4" />
-                                                <span className="font-medium">Potential Issues: {matches.join(', ')}</span>
-                                            </div>
-                                        ) : (
-                                            <div className="flex items-center gap-2 text-green-500">
-                                                <CheckCircle2 className="w-4 h-4" />
-                                                <span>No malicious patterns found.</span>
-                                            </div>
-                                        )}
-                                    </li>
-                                ))}
-                            </ul>
+                             <p className="text-sm text-muted-foreground">{mozillaInfo?.error || 'Mozilla Observatory scan could not be completed.'}</p>
                         )}
                     </CardContent>
                 </Card>
