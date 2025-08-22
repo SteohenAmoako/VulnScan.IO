@@ -7,6 +7,7 @@ const RETRY_DELAY = 5000; // 5 seconds
 
 // Initiates a scan and returns the scan ID
 async function initiateScan(host: string): Promise<any> {
+    console.log(host)
     try {
         const response = await fetch(`${OBSERVATORY_API_URL}/scan?host=${host}`, {
             method: 'POST',
@@ -62,13 +63,18 @@ export async function getMozillaObservatoryAnalysis(host: string): Promise<any> 
             return initialResponse;
         }
 
-        if (initialResponse.error) {
+        // Handle cases where the API returns an error immediately
+        if (initialResponse && initialResponse.error) {
+            console.error("Mozilla Observatory API returned an error on initiation:", initialResponse.error);
             return { error: initialResponse.error };
         }
         
+        // If we get here, we expect a scan_id to start polling
         const scanId = initialResponse.scan_id;
         if (!scanId) {
-             throw new Error('No scan_id returned from Mozilla Observatory.');
+             // This can happen if the response is unexpected, e.g. an undocumented error format.
+             console.error("Unexpected response from Mozilla Observatory:", initialResponse);
+             throw new Error('No scan_id returned from Mozilla Observatory and no finished state or error was found.');
         }
 
         console.log(`Polling for Mozilla Observatory results for scan ID: ${scanId}`);
