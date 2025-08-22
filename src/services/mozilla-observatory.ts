@@ -56,6 +56,12 @@ export async function getMozillaObservatoryAnalysis(host: string): Promise<any> 
     try {
         const initialResponse = await initiateScan(host);
 
+        // Handle cases where the API returns a finished report immediately (from cache)
+        if (initialResponse && initialResponse.state === 'FINISHED') {
+            console.log("Mozilla Observatory returned a cached report immediately.");
+            return initialResponse;
+        }
+
         if (initialResponse.error) {
             return { error: initialResponse.error };
         }
