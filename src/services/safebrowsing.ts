@@ -26,7 +26,7 @@ export async function checkUrlWithSafeBrowsing(url: string): Promise<SafeBrowsin
     const apiKey = process.env.GEMINI_API_KEY; // Using GEMINI_API_KEY as it's the Google Cloud key
     if (!apiKey) {
         console.warn('GEMINI_API_KEY is not set. Skipping Safe Browsing check.');
-        return { error: { message: 'SAFE_BROWSING_API_KEY is not configured on the server.' } };
+        return { error: { message: 'Google API key is not configured on the server.' } };
     }
 
     const requestBody = {
