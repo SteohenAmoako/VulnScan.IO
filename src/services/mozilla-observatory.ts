@@ -38,7 +38,6 @@ async function getScanResults(scanId: number): Promise<any> {
             await new Promise(resolve => setTimeout(resolve, RETRY_DELAY));
             const response = await fetch(`${OBSERVATORY_API_URL}/getScanResults?scan=${scanId}`);
             if (!response.ok) {
-                console.warn(`Polling Mozilla Observatory: Status ${response.status}`);
                 continue;
             }
             const data = await response.json();
@@ -48,7 +47,6 @@ async function getScanResults(scanId: number): Promise<any> {
             } else if (data.state === 'FAILED') {
                 return { error: 'Mozilla Observatory scan failed to complete.' };
             }
-            console.log(`Mozilla Observatory scan state: ${data.state}. Retrying...`);
         } catch (error: any) {
              // Don't log here, let the main function handle it.
         }
@@ -59,7 +57,6 @@ async function getScanResults(scanId: number): Promise<any> {
 
 // Main function to get the analysis for a host
 export async function getMozillaObservatoryAnalysis(host: string): Promise<any> {
-    console.log("Requesting new Mozilla Observatory scan for:", host);
     try {
         const initialResponse = await initiateScan(host);
 
@@ -70,7 +67,6 @@ export async function getMozillaObservatoryAnalysis(host: string): Promise<any> 
         
         // Handle immediate successful (cached) report
         if (initialResponse.state === 'FINISHED') {
-            console.log("Mozilla Observatory returned a report immediately.");
             return initialResponse;
         }
 
@@ -79,7 +75,6 @@ export async function getMozillaObservatoryAnalysis(host: string): Promise<any> 
              return { error: 'No scan_id returned from Mozilla Observatory and no finished state or error was found.' };
         }
 
-        console.log(`Polling for Mozilla Observatory results for scan ID: ${scanId}`);
         return await getScanResults(scanId);
         
     } catch (error: any) {

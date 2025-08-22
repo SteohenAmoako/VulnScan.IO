@@ -210,7 +210,7 @@ async function ScanResults({ url }: { url: string }) {
         { name: 'Medium', value: mediumSeverity, fill: 'hsl(var(--chart-4))' },
         { name: 'Low/Info', value: lowSeverity, fill: 'hsl(var(--chart-2))' },
         { name: 'Secure', value: secureCount, fill: 'hsl(var(--chart-3))' }
-    ].filter(item => item.value > 0);
+    ];
 
 
     return (
@@ -229,7 +229,6 @@ async function ScanResults({ url }: { url: string }) {
       </>
     );
   } catch (error: any) {
-    console.error("Scanning failed:", error);
     let message = "We couldn't scan the provided URL. It might be offline, or an unexpected error occurred. Please try again later.";
     if (error.message && error.message.includes('VIRUSTOTAL_API_KEY is not set')) {
         message = "The VirusTotal API key is not configured. Please set the VIRUSTOTAL_API_KEY in your .env file to enable live scanning.";

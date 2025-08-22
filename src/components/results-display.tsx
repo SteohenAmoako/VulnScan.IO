@@ -1,9 +1,11 @@
+
 'use client';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { AlertCircle, CheckCircle2, ShieldQuestion, FileText, Bot } from 'lucide-react';
 import { Badge } from "@/components/ui/badge";
+import { ReportActions } from "./report-actions";
 
 interface ResultsDisplayProps {
     url: string;
@@ -81,6 +83,8 @@ export function ResultsDisplay({ url, report, summary }: ResultsDisplayProps) {
                     Results for: <span className="font-medium text-primary break-all">{url}</span>
                 </p>
             </div>
+            
+            <ReportActions url={url} report={report} summary={summary} />
 
             <Card>
                 <CardHeader>

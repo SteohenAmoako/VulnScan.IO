@@ -1,3 +1,4 @@
+
 import fetch, { RequestInit } from 'node-fetch';
 
 const VIRUSTOTAL_API_URL = 'https://www.virustotal.com/api/v3';
@@ -67,11 +68,9 @@ async function getUrlAnalysisReport(analysisId: string): Promise<any> {
 // Main function to get the analysis for a URL
 export async function getUrlAnalysis(url: string) {
     if (cache.has(url)) {
-        console.log("Returning cached VirusTotal report for:", url);
         return cache.get(url);
     }
     
-    console.log("Requesting new VirusTotal scan for:", url);
     const { analysisId, error: submitError } = await submitUrlForAnalysis(url);
 
     if (submitError) {
@@ -83,10 +82,8 @@ export async function getUrlAnalysis(url: string) {
     }
 
     // VirusTotal needs a few seconds to process the URL.
-    console.log(`Waiting for VirusTotal to analyze... (ID: ${analysisId})`);
     await new Promise(resolve => setTimeout(resolve, 15000));
 
-    console.log("Fetching VirusTotal report for:", url);
     const report = await getUrlAnalysisReport(analysisId);
     
     if (!report.error) {
