@@ -32,11 +32,25 @@ const getSslGradeVariant = (grade: string | undefined) => {
     return 'destructive';
 }
 
-const getMozillaGradeVariant = (grade: string | undefined) => {
-    if (!grade) return 'secondary';
-    if (['A+', 'A', 'A-'].includes(grade)) return 'default';
-    if (['B+', 'B', 'B-'].includes(grade)) return 'secondary';
-    return 'destructive';
+export const getMozillaGradeInfo = (grade: string | undefined) => {
+    if (!grade) return { variant: 'secondary' as const, description: 'The grade could not be determined.' };
+    switch (grade) {
+        case 'A+': return { variant: 'default' as const, description: 'It got the highest possible grade (A+). That means the website is configured with excellent security headers (like HSTS, CSP, X-Frame-Options, etc.).' };
+        case 'A':
+        case 'A-': 
+            return { variant: 'default' as const, description: 'This is a good grade. The website has implemented strong security headers, providing a solid defense against common web attacks.' };
+        case 'B+':
+        case 'B':
+        case 'B-': 
+            return { variant: 'secondary' as const, description: 'This is an average grade. The website is missing some important security headers, leaving it partially exposed to attacks like clickjacking or cross-site scripting.' };
+        case 'C+':
+        case 'C':
+        case 'C-': 
+            return { variant: 'destructive' as const, description: 'This grade indicates a significant lack of security headers. The website is likely vulnerable to a variety of common and easily preventable attacks.' };
+        case 'D': return { variant: 'destructive' as const, description: 'This grade is a cause for concern, indicating very poor security header configuration and high risk of attack.' };
+        case 'F': return { variant: 'destructive' as const, description: 'This is a failing grade. The website has made little to no effort to implement basic security headers, leaving it highly vulnerable.' };
+        default: return { variant: 'secondary' as const, description: 'An unrecognized grade was returned by the scan.' };
+    }
 };
 
 
@@ -48,6 +62,8 @@ export function URLDetails({ url, domainInfo, sslInfo, mozillaInfo, urlParamAnal
         { name: 'Score', value: mozillaScore, fill: 'hsl(var(--primary))' },
         { name: 'Remaining', value: Math.max(100 - mozillaScore, 0), fill: 'hsl(var(--muted))' }
     ];
+    
+    const mozillaGradeInfo = getMozillaGradeInfo(mozillaInfo?.grade);
 
     return (
         <div className="container px-4 md:px-6 py-12">
@@ -110,42 +126,45 @@ export function URLDetails({ url, domainInfo, sslInfo, mozillaInfo, urlParamAnal
                     </CardHeader>
                     <CardContent>
                         {mozillaInfo && !mozillaInfo.error ? (
-                            <div className="grid grid-cols-2 gap-4 items-center">
-                                <div className="space-y-2">
-                                    <div className="flex items-center gap-2">
-                                        <span className="font-semibold">Grade:</span>
-                                        <Badge variant={getMozillaGradeVariant(mozillaInfo.grade)}>{mozillaInfo.grade || 'N/A'}</Badge>
+                            <div className="flex flex-col gap-4">
+                                <div className="grid grid-cols-2 gap-4 items-center">
+                                    <div className="space-y-2">
+                                        <div className="flex items-center gap-2">
+                                            <span className="font-semibold">Grade:</span>
+                                            <Badge variant={mozillaGradeInfo.variant}>{mozillaInfo.grade || 'N/A'}</Badge>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <span className="font-semibold">Score:</span>
+                                            <span className="font-bold">{mozillaInfo.score} / 100</span>
+                                        </div>
                                     </div>
-                                    <div className="flex items-center gap-2">
-                                        <span className="font-semibold">Score:</span>
-                                        <span className="font-bold">{mozillaInfo.score} / 100</span>
+                                    <div className="w-full h-24">
+                                         <ResponsiveContainer width="100%" height="100%">
+                                            <PieChart>
+                                                <Pie
+                                                    data={mozillaChartData}
+                                                    cx="50%"
+                                                    cy="50%"
+                                                    labelLine={false}
+                                                    innerRadius={25}
+                                                    outerRadius={40}
+                                                    paddingAngle={2}
+                                                    dataKey="value"
+                                                >
+                                                    {mozillaChartData.map((entry, index) => (
+                                                        <Cell key={`cell-${index}`} fill={entry.fill} />
+                                                    ))}
+                                                </Pie>
+                                                <Tooltip
+                                                    cursor={{ fill: 'transparent' }}
+                                                    contentStyle={{ backgroundColor: 'hsl(var(--background))', border: '1px solid hsl(var(--border))', borderRadius: 'var(--radius)'}}
+                                                    formatter={(value, name) => [value, name]}
+                                                />
+                                            </PieChart>
+                                        </ResponsiveContainer>
                                     </div>
                                 </div>
-                                <div className="w-full h-24">
-                                     <ResponsiveContainer width="100%" height="100%">
-                                        <PieChart>
-                                            <Pie
-                                                data={mozillaChartData}
-                                                cx="50%"
-                                                cy="50%"
-                                                labelLine={false}
-                                                innerRadius={25}
-                                                outerRadius={40}
-                                                paddingAngle={2}
-                                                dataKey="value"
-                                            >
-                                                {mozillaChartData.map((entry, index) => (
-                                                    <Cell key={`cell-${index}`} fill={entry.fill} />
-                                                ))}
-                                            </Pie>
-                                            <Tooltip
-                                                cursor={{ fill: 'transparent' }}
-                                                contentStyle={{ backgroundColor: 'hsl(var(--background))', border: '1px solid hsl(var(--border))', borderRadius: 'var(--radius)'}}
-                                                formatter={(value, name) => [value, name]}
-                                            />
-                                        </PieChart>
-                                    </ResponsiveContainer>
-                                </div>
+                                <p className="text-sm text-muted-foreground">{mozillaGradeInfo.description}</p>
                             </div>
                         ) : (
                              <p className="text-sm text-muted-foreground">{mozillaInfo?.error || 'Mozilla Observatory scan could not be completed.'}</p>

@@ -9,7 +9,7 @@ import { getMozillaObservatoryInfo } from '@/ai/flows/get-mozilla-observatory-in
 import { Header } from '@/components/header';
 import { Footer } from '@/components/footer';
 import { ResultsDisplay } from '@/components/results-display';
-import { URLDetails } from '@/components/url-details';
+import { URLDetails, getMozillaGradeInfo } from '@/components/url-details';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { AlertTriangle, Home } from 'lucide-react';
 import type { Metadata } from 'next';
@@ -151,8 +151,17 @@ async function ScanResults({ url }: { url: string }) {
         getMozillaObservatoryInfo({ host: domain }),
     ]);
     
+    const mozillaGradeInfo = getMozillaGradeInfo(mozillaInfo?.grade);
+
     // VirusTotal scan depends on the URL, other data can be passed to it
-    const scanResult = await scanWebsite({ url: decodedUrl, sslInfo: sslInfo ?? undefined, mozillaInfo: mozillaInfo ?? undefined });
+    const scanResult = await scanWebsite({ 
+      url: decodedUrl, 
+      sslInfo: sslInfo ?? undefined, 
+      mozillaInfo: mozillaInfo ? { 
+          ...mozillaInfo, 
+          description: mozillaGradeInfo.description 
+      } : undefined
+    });
 
     // Now, create the summary with all the data gathered
     const summaryContext = {
@@ -160,7 +169,10 @@ async function ScanResults({ url }: { url: string }) {
         isHttps,
         urlParamFindings: urlParamAnalysis.findings,
         sslInfo: sslInfo ?? undefined,
-        mozillaInfo: mozillaInfo ?? undefined,
+        mozillaInfo: mozillaInfo ? {
+            ...mozillaInfo,
+            description: mozillaGradeInfo.description
+        } : undefined,
     };
 
     const summaryResult = await summarizeVulnerabilityReport(summaryContext);
