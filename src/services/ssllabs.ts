@@ -8,11 +8,8 @@ const cache = new Map<string, any>();
 
 export async function getSslLabsAnalysis(host: string): Promise<any> {
     if (cache.has(host)) {
-        console.log("Returning cached SSL Labs report for:", host);
         return cache.get(host);
     }
-    
-    console.log("Requesting new SSL Labs scan for:", host);
     
     // The `all=done` parameter makes this a blocking call that waits for the results.
     // This can take a minute or two. For a production app, a non-blocking approach with polling is better.
@@ -38,7 +35,6 @@ export async function getSslLabsAnalysis(host: string): Promise<any> {
         return data;
 
     } catch (error: any) {
-        console.error('Error during getSslLabsAnalysis:', error);
         // Return an error object that flows can handle gracefully
         return { error: `Failed to communicate with SSL Labs API: ${error.message}` };
     }

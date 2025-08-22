@@ -63,7 +63,6 @@ const getSslInfoFlow = ai.defineFlow(
       }
       return { error: 'No endpoint data found in SSL Labs response.' };
     } catch (e: any) {
-      console.error("Error in getSslInfoFlow:", e);
       return { error: e.message || 'Failed to fetch SSL Labs info.' };
     }
   }

@@ -25,7 +25,6 @@ export async function lookupDomain(domain: string): Promise<DomainInfo> {
         return data || { error: 'No data returned from API.' };
 
     } catch (error: any) {
-        console.error('Error during lookupDomain:', error);
         throw new Error(`Failed to communicate with API Ninjas: ${error.message}`);
     }
 }

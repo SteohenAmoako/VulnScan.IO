@@ -48,7 +48,6 @@ const getMozillaObservatoryInfoFlow = ai.defineFlow(
       };
 
     } catch (e: any) {
-      console.error("Error in getMozillaObservatoryInfoFlow:", e);
       return { error: e.message || 'Failed to fetch Mozilla Observatory info.' };
     }
   }

@@ -43,7 +43,6 @@ const getDomainInfoFlow = ai.defineFlow(
       const domainInfo = await lookupDomain(domain);
       return domainInfo;
     } catch (e: any) {
-      console.error("Error in getDomainInfoFlow:", e);
       return { error: e.message || 'Failed to fetch domain info.' };
     }
   }
