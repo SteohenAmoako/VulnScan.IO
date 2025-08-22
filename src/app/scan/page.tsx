@@ -6,7 +6,8 @@ import { summarizeVulnerabilityReport } from '@/ai/flows/summarize-vulnerability
 import { getDomainInfo } from '@/ai/flows/get-domain-info';
 import { getSslInfo } from '@/ai/flows/get-ssl-info';
 import { getMozillaObservatoryInfo } from '@/ai/flows/get-mozilla-observatory-info';
-import { getNvdVulnerabilities, type NvdOutput } from '@/ai/flows/get-nvd-vulnerabilities';
+import { getNvdVulnerabilities } from '@/ai/flows/get-nvd-vulnerabilities';
+import { getSafeBrowsingInfo } from '@/ai/flows/get-safe-browsing-info';
 import { Header } from '@/components/header';
 import { Footer } from '@/components/footer';
 import { ResultsDisplay } from '@/components/results-display';
@@ -170,10 +171,11 @@ async function ScanResults({ url }: { url: string }) {
     const technologiesToScan = ['apache', 'nginx', 'openssl', 'react'];
 
     // Fetch all data in parallel
-    const [domainInfo, sslInfo, mozillaInfo, ...nvdResults] = await Promise.all([
+    const [domainInfo, sslInfo, mozillaInfo, safeBrowsingInfo, ...nvdResults] = await Promise.all([
         getDomainInfo({ domain }),
         isHttps ? getSslInfo({ host: domain }) : Promise.resolve(null),
         getMozillaObservatoryInfo({ host: domain }),
+        getSafeBrowsingInfo({ url: decodedUrl }),
         ...technologiesToScan.map(tech => getNvdVulnerabilities({ technology: tech }))
     ]);
 
@@ -191,6 +193,7 @@ async function ScanResults({ url }: { url: string }) {
           description: mozillaGradeInfo.description
       } : undefined,
       nvdResults: relevantNvdResults,
+      safeBrowsingInfo: safeBrowsingInfo,
     });
 
     // Now, create the summary with all the data gathered
@@ -212,6 +215,10 @@ async function ScanResults({ url }: { url: string }) {
     let highSeverity = (stats.malicious * 3) + (!isHttps ? 2 : 0);
     let mediumSeverity = stats.suspicious * 2;
     let lowSeverity = 0; // For informational items
+
+    if (safeBrowsingInfo.matches && safeBrowsingInfo.matches.length > 0) {
+        highSeverity += safeBrowsingInfo.matches.length;
+    }
 
     urlParamAnalysis.findings.forEach(finding => {
         if (finding.matches.length > 0) {
