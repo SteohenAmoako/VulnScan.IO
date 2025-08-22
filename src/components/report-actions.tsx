@@ -90,12 +90,9 @@ export function ReportActions({ url, report, summary }: ReportActionsProps) {
     };
     
     const handleRescan = () => {
-        // router.refresh() re-runs the server-side data fetching for the current route
-        router.refresh();
-        toast({
-            title: "Rescan Initiated",
-            description: "Fetching the latest vulnerability report for this URL.",
-        });
+        // Add a random query param to force a full reload, triggering Suspense
+        const randomQuery = `&t=${new Date().getTime()}`;
+        router.push(`/scan?url=${encodeURIComponent(url)}${randomQuery}`);
     };
     
     const handleReportIncorrect = () => {
