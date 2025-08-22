@@ -9,7 +9,7 @@ import { getMozillaObservatoryInfo } from '@/ai/flows/get-mozilla-observatory-in
 import { Header } from '@/components/header';
 import { Footer } from '@/components/footer';
 import { ResultsDisplay } from '@/components/results-display';
-import { URLDetails, getMozillaGradeInfo } from '@/components/url-details';
+import { URLDetails } from '@/components/url-details';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { AlertTriangle, Home } from 'lucide-react';
 import type { Metadata } from 'next';
@@ -81,6 +81,26 @@ const MALICIOUS_PATTERNS = [
   { label: 'Encoded ../ (%2e%2e)', regex: /%2e%2e/i }
 ];
 
+const getMozillaGradeInfo = (grade: string | undefined) => {
+    if (!grade) return { variant: 'secondary' as const, description: 'The grade could not be determined.' };
+    switch (grade) {
+        case 'A+': return { variant: 'default' as const, description: 'It got the highest possible grade (A+). That means the website is configured with excellent security headers (like HSTS, CSP, X-Frame-Options, etc.).' };
+        case 'A':
+        case 'A-': 
+            return { variant: 'default' as const, description: 'This is a good grade. The website has implemented strong security headers, providing a solid defense against common web attacks.' };
+        case 'B+':
+        case 'B':
+        case 'B-': 
+            return { variant: 'secondary' as const, description: 'This is an average grade. The website is missing some important security headers, leaving it partially exposed to attacks like clickjacking or cross-site scripting.' };
+        case 'C+':
+        case 'C':
+        case 'C-': 
+            return { variant: 'destructive' as const, description: 'This grade indicates a significant lack of security headers. The website is likely vulnerable to a variety of common and easily preventable attacks.' };
+        case 'D': return { variant: 'destructive' as const, description: 'This grade is a cause for concern, indicating very poor security header configuration and high risk of attack.' };
+        case 'F': return { variant: 'destructive' as const, description: 'This is a failing grade. The website has made little to no effort to implement basic security headers, leaving it highly vulnerable.' };
+        default: return { variant: 'secondary' as const, description: 'An unrecognized grade was returned by the scan.' };
+    }
+};
 
 function analyzeUrlParameters(inputUrl: string) {
     try {
@@ -227,7 +247,7 @@ async function ScanResults({ url }: { url: string }) {
 
     return (
       <>
-        <URLDetails url={decodedUrl} domainInfo={domainInfo} urlParamAnalysis={urlParamAnalysis} sslInfo={sslInfo} mozillaInfo={mozillaInfo} />
+        <URLDetails url={decodedUrl} domainInfo={domainInfo} urlParamAnalysis={urlParamAnalysis} sslInfo={sslInfo} mozillaInfo={mozillaInfo} mozillaGradeInfo={mozillaGradeInfo} />
         <div className="container px-4 md:px-6 py-12">
             <div className="grid gap-8 lg:grid-cols-3">
                 <div className="lg:col-span-2">

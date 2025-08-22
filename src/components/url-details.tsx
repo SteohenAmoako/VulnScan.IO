@@ -22,7 +22,11 @@ interface URLDetailsProps {
             value: string;
             matches: string[];
         }[];
-    }
+    };
+    mozillaGradeInfo: {
+        variant: "default" | "secondary" | "destructive";
+        description: string;
+    };
 }
 
 const getSslGradeVariant = (grade: string | undefined) => {
@@ -32,29 +36,7 @@ const getSslGradeVariant = (grade: string | undefined) => {
     return 'destructive';
 }
 
-export const getMozillaGradeInfo = (grade: string | undefined) => {
-    if (!grade) return { variant: 'secondary' as const, description: 'The grade could not be determined.' };
-    switch (grade) {
-        case 'A+': return { variant: 'default' as const, description: 'It got the highest possible grade (A+). That means the website is configured with excellent security headers (like HSTS, CSP, X-Frame-Options, etc.).' };
-        case 'A':
-        case 'A-': 
-            return { variant: 'default' as const, description: 'This is a good grade. The website has implemented strong security headers, providing a solid defense against common web attacks.' };
-        case 'B+':
-        case 'B':
-        case 'B-': 
-            return { variant: 'secondary' as const, description: 'This is an average grade. The website is missing some important security headers, leaving it partially exposed to attacks like clickjacking or cross-site scripting.' };
-        case 'C+':
-        case 'C':
-        case 'C-': 
-            return { variant: 'destructive' as const, description: 'This grade indicates a significant lack of security headers. The website is likely vulnerable to a variety of common and easily preventable attacks.' };
-        case 'D': return { variant: 'destructive' as const, description: 'This grade is a cause for concern, indicating very poor security header configuration and high risk of attack.' };
-        case 'F': return { variant: 'destructive' as const, description: 'This is a failing grade. The website has made little to no effort to implement basic security headers, leaving it highly vulnerable.' };
-        default: return { variant: 'secondary' as const, description: 'An unrecognized grade was returned by the scan.' };
-    }
-};
-
-
-export function URLDetails({ url, domainInfo, sslInfo, mozillaInfo, urlParamAnalysis }: URLDetailsProps) {
+export function URLDetails({ url, domainInfo, sslInfo, mozillaInfo, urlParamAnalysis, mozillaGradeInfo }: URLDetailsProps) {
     const isHttps = new URL(url).protocol === 'https:';
 
     const mozillaScore = mozillaInfo?.score ?? 0;
@@ -63,8 +45,6 @@ export function URLDetails({ url, domainInfo, sslInfo, mozillaInfo, urlParamAnal
         { name: 'Remaining', value: Math.max(100 - mozillaScore, 0), fill: 'hsl(var(--muted))' }
     ];
     
-    const mozillaGradeInfo = getMozillaGradeInfo(mozillaInfo?.grade);
-
     return (
         <div className="container px-4 md:px-6 py-12">
             <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-4">
