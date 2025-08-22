@@ -7,24 +7,28 @@ const RETRY_DELAY = 5000; // 5 seconds
 
 // Initiates a scan and returns the scan ID
 async function initiateScan(host: string): Promise<any> {
-    try {
-        const response = await fetch(`${OBSERVATORY_API_URL}/scan?host=${host}`, {
-            method: 'POST',
-        });
-        if (!response.ok) {
-            const errorText = await response.text();
-            throw new Error(`Mozilla Observatory API initiate scan failed with status ${response.status}: ${errorText}`);
+    const response = await fetch(`${OBSERVATORY_API_URL}/scan?host=${host}`, {
+        method: 'POST',
+    });
+    if (!response.ok) {
+        const errorText = await response.text();
+        // This is a special case for invalid hostnames. We want to return a structured error.
+        if (response.status === 422) {
+            try {
+                const errorJson = JSON.parse(errorText);
+                return { error: errorJson.message || 'Invalid hostname provided.' };
+            } catch {
+                return { error: 'Invalid hostname provided.' };
+            }
         }
-        const text = await response.text();
-        // The API might return an empty response in some cases, so we check for that.
-        if (!text) {
-          return {};
-        }
-        return JSON.parse(text);
-    } catch (error: any) {
-        console.error('Error during initiateScan:', error);
-        throw new Error(`Failed to initiate Mozilla Observatory scan: ${error.message}`);
+        throw new Error(`Mozilla Observatory API initiate scan failed with status ${response.status}: ${errorText}`);
     }
+    const text = await response.text();
+    // The API might return an empty response in some cases, so we check for that.
+    if (!text) {
+      return {};
+    }
+    return JSON.parse(text);
 }
 
 // Retrieves the results for a given scan ID, polling until complete
@@ -42,14 +46,14 @@ async function getScanResults(scanId: number): Promise<any> {
             if (data.state === 'FINISHED') {
                 return data;
             } else if (data.state === 'FAILED') {
-                throw new Error('Mozilla Observatory scan failed to complete.');
+                return { error: 'Mozilla Observatory scan failed to complete.' };
             }
             console.log(`Mozilla Observatory scan state: ${data.state}. Retrying...`);
         } catch (error: any) {
              console.error('Error polling Mozilla Observatory:', error);
         }
     }
-    throw new Error('Mozilla Observatory scan timed out after maximum retries.');
+    return { error: 'Mozilla Observatory scan timed out after maximum retries.' };
 }
 
 
@@ -59,20 +63,21 @@ export async function getMozillaObservatoryAnalysis(host: string): Promise<any> 
     try {
         const initialResponse = await initiateScan(host);
 
-        if (initialResponse && initialResponse.state === 'FINISHED') {
+        // Handle immediate error from initiateScan (e.g., invalid hostname)
+        if (initialResponse.error) {
+            return { error: initialResponse.error };
+        }
+        
+        // Handle immediate successful (cached) report
+        if (initialResponse.state === 'FINISHED') {
             console.log("Mozilla Observatory returned a cached report immediately.");
             return initialResponse;
         }
 
-        if (initialResponse && initialResponse.error) {
-            console.error("Mozilla Observatory API returned an error on initiation:", initialResponse.error);
-            return { error: initialResponse.error };
-        }
-        
         const scanId = initialResponse?.scan_id;
         if (!scanId) {
              console.error("Unexpected response from Mozilla Observatory:", initialResponse);
-             throw new Error('No scan_id returned from Mozilla Observatory and no finished state or error was found.');
+             return { error: 'No scan_id returned from Mozilla Observatory and no finished state or error was found.' };
         }
 
         console.log(`Polling for Mozilla Observatory results for scan ID: ${scanId}`);
