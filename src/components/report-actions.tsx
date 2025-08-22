@@ -3,10 +3,9 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useForm, ValidationError } from '@formspree/react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { Download, Repeat, Search, MessageSquareWarning, Send, CheckCircle2 } from 'lucide-react';
+import { Download, Repeat, Search, MessageSquareWarning, Send } from 'lucide-react';
 import Link from 'next/link';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
@@ -20,17 +19,7 @@ interface ReportActionsProps {
 }
 
 function ReportFeedback({ url, summary }: { url: string, summary: string }) {
-    const [state, handleSubmit] = useForm("xjkonyne");
-    
-    if (state.succeeded) {
-      return (
-        <div className="flex flex-col items-center text-center p-4 border rounded-lg bg-secondary">
-          <CheckCircle2 className="w-12 h-12 text-green-500 mb-2" />
-          <h3 className="font-bold">Thank you for your feedback!</h3>
-          <p className="text-sm text-muted-foreground">We'll use it to improve our scanner.</p>
-        </div>
-      );
-    }
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
     return (
         <Card className="mt-6 border-destructive/50 w-full max-w-lg">
@@ -41,7 +30,12 @@ function ReportFeedback({ url, summary }: { url: string, summary: string }) {
                 </CardTitle>
             </CardHeader>
             <CardContent>
-                <form onSubmit={handleSubmit} className="space-y-4">
+                <form 
+                    action="https://formsubmit.co/stevekobbi20@gmail.com" 
+                    method="POST" 
+                    className="space-y-4"
+                    onSubmit={() => setIsSubmitting(true)}
+                >
                     <input type="hidden" name="Scanned URL" value={url} />
                     <input type="hidden" name="AI Summary" value={summary} />
                     <Textarea
@@ -51,14 +45,8 @@ function ReportFeedback({ url, summary }: { url: string, summary: string }) {
                         rows={5}
                         required
                     />
-                    <ValidationError 
-                        prefix="Feedback" 
-                        field="Feedback"
-                        errors={state.errors}
-                        className="text-destructive text-sm"
-                    />
-                    <Button type="submit" variant="destructive" disabled={state.submitting}>
-                         {state.submitting ? (
+                    <Button type="submit" variant="destructive" disabled={isSubmitting}>
+                         {isSubmitting ? (
                             <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary-foreground"></div>
                          ) : (
                              <Send className="mr-2 h-4 w-4" />
