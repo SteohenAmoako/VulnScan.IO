@@ -18,7 +18,7 @@ async function initiateScan(host: string): Promise<any> {
     try {
         const data = JSON.parse(text);
         
-        // Handle specific API error format
+        // Handle specific API error format, but only if it's a real error.
         if (data.error && data.message) {
              return { error: data.message };
         }
@@ -30,6 +30,7 @@ async function initiateScan(host: string): Promise<any> {
         if (!response.ok) {
             return { error: `Mozilla Observatory API request failed with status ${response.status} and non-JSON response: ${text}` };
         }
+        // If it was a 2xx response but not JSON, it's an issue.
         return { error: 'Received an empty or invalid response from Mozilla Observatory.' };
     }
 }
@@ -70,7 +71,7 @@ export async function getMozillaObservatoryAnalysis(host: string): Promise<any> 
         }
         
         // Handle immediate successful (cached) report
-        if (initialResponse.state === 'FINISHED') {
+        if (initialResponse.state === 'FINISHED' || initialResponse.grade) {
             return initialResponse;
         }
 
