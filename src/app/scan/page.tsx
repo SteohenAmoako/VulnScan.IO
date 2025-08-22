@@ -6,6 +6,7 @@ import { summarizeVulnerabilityReport } from '@/ai/flows/summarize-vulnerability
 import { getDomainInfo } from '@/ai/flows/get-domain-info';
 import { getSslInfo } from '@/ai/flows/get-ssl-info';
 import { getMozillaObservatoryInfo } from '@/ai/flows/get-mozilla-observatory-info';
+import { getNvdVulnerabilities, type NvdOutput } from '@/ai/flows/get-nvd-vulnerabilities';
 import { Header } from '@/components/header';
 import { Footer } from '@/components/footer';
 import { ResultsDisplay } from '@/components/results-display';
@@ -163,15 +164,23 @@ async function ScanResults({ url }: { url: string }) {
   try {
     const isHttps = new URL(decodedUrl).protocol === 'https:';
     const urlParamAnalysis = analyzeUrlParameters(decodedUrl);
+
+    // For the prototype, we'll scan for a few common technologies.
+    // A more advanced version could try to identify technologies from the page.
+    const technologiesToScan = ['apache', 'nginx', 'openssl', 'react'];
     
     // Fetch all data in parallel
-    const [domainInfo, sslInfo, mozillaInfo] = await Promise.all([
+    const [domainInfo, sslInfo, mozillaInfo, ...nvdResults] = await Promise.all([
         getDomainInfo({ domain }),
         isHttps ? getSslInfo({ host: domain }) : Promise.resolve(null),
         getMozillaObservatoryInfo({ host: domain }),
+        ...technologiesToScan.map(tech => getNvdVulnerabilities({ technology: tech }))
     ]);
     
     const mozillaGradeInfo = getMozillaGradeInfo(mozillaInfo?.grade);
+    
+    // Filter out NVD results that have no vulnerabilities
+    const relevantNvdResults = nvdResults.filter(r => r.totalResults > 0);
 
     // VirusTotal scan depends on the URL, other data can be passed to it
     const scanResult = await scanWebsite({ 
@@ -180,7 +189,8 @@ async function ScanResults({ url }: { url: string }) {
       mozillaInfo: mozillaInfo ? { 
           ...mozillaInfo, 
           description: mozillaGradeInfo.description 
-      } : undefined
+      } : undefined,
+      nvdResults: relevantNvdResults,
     });
 
     // Now, create the summary with all the data gathered
@@ -228,6 +238,10 @@ async function ScanResults({ url }: { url: string }) {
             highSeverity +=1;
         }
     }
+    
+    relevantNvdResults.forEach(result => {
+        highSeverity += result.vulnerabilities?.filter(v => v.severity === 'CRITICAL' || v.severity === 'HIGH').length ?? 0;
+    });
 
 
     if (domainInfo && !domainInfo.error && (domainInfo.domain_age || domainInfo.registrar)) {
