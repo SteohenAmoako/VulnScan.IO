@@ -133,9 +133,37 @@ export function ReportActions({ url, report, summary }: ReportActionsProps) {
     };
     
     const handleReportIncorrect = () => {
+        const recipient = 'stevekobbi20@gmail.com';
+        const subject = `Incorrect Scan Report for ${url}`;
+        const body = `
+Please provide your feedback below on what was incorrect about the scan results.
+Your detailed feedback is crucial for improving the accuracy of our scanner.
+
+[** YOUR FEEDBACK HERE **]
+
+
+
+-----------------------------------
+        SCAN DETAILS (for context)
+-----------------------------------
+
+Scanned URL: ${url}
+
+AI Summary:
+${summary}
+
+Full Report:
+${report.replace(/\*\*/g, '')}
+        `;
+        
+        const mailtoLink = `mailto:${recipient}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+        
+        // Open the user's default email client
+        window.location.href = mailtoLink;
+
         toast({
-            title: "Thank You!",
-            description: "Your feedback helps us improve our scanning engine.",
+            title: "Report Submitted",
+            description: "Thank you! Your email client has been opened to send the report.",
         });
     };
 
