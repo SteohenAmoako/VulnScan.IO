@@ -63,7 +63,6 @@ export async function searchNvdByKeyword(keyword: string): Promise<NvdApiRespons
         return data;
 
     } catch (error: any) {
-        console.error(`Failed to communicate with NVD API: ${error.message}`);
         return { error: `Failed to communicate with NVD API: ${error.message}`, resultsPerPage: 0, startIndex: 0, totalResults: 0, vulnerabilities: [] };
     }
 }
