@@ -10,26 +10,30 @@ async function initiateScan(host: string): Promise<any> {
     const response = await fetch(`${OBSERVATORY_API_URL}/scan?host=${host}&hidden=true`, {
         method: 'POST',
     });
-    if (!response.ok) {
-        const errorText = await response.text();
-        // This is a special case for invalid hostnames. We want to return a structured error.
-        if (response.status === 422) {
-            try {
-                const errorJson = JSON.parse(errorText);
-                return { error: errorJson.message || 'Invalid hostname provided.' };
-            } catch {
-                return { error: 'Invalid hostname provided.' };
-            }
-        }
-        throw new Error(`Mozilla Observatory API initiate scan failed with status ${response.status}: ${errorText}`);
-    }
+
     const text = await response.text();
-    // The API might return an empty response in some cases, so we check for that.
-    if (!text) {
-      return {};
+    
+    // Even if response.ok is false, the body might contain a valid report or error message.
+    // So we try to parse it regardless of status code.
+    try {
+        const data = JSON.parse(text);
+        
+        // Handle specific API error format
+        if (data.error && data.message) {
+             return { error: data.message };
+        }
+
+        return data;
+
+    } catch (e) {
+        // This handles cases where the response is not valid JSON.
+        if (!response.ok) {
+            return { error: `Mozilla Observatory API request failed with status ${response.status} and non-JSON response: ${text}` };
+        }
+        return { error: 'Received an empty or invalid response from Mozilla Observatory.' };
     }
-    return JSON.parse(text);
 }
+
 
 // Retrieves the results for a given scan ID, polling until complete
 async function getScanResults(scanId: number): Promise<any> {
@@ -48,7 +52,7 @@ async function getScanResults(scanId: number): Promise<any> {
                 return { error: 'Mozilla Observatory scan failed to complete.' };
             }
         } catch (error: any) {
-             // Don't log here, let the main function handle it.
+             // Let the loop continue on intermittent failures.
         }
     }
     return { error: 'Mozilla Observatory scan timed out after maximum retries.' };
@@ -60,7 +64,7 @@ export async function getMozillaObservatoryAnalysis(host: string): Promise<any> 
     try {
         const initialResponse = await initiateScan(host);
 
-        // Handle immediate error from initiateScan (e.g., invalid hostname)
+        // Handle immediate error from initiateScan (e.g., invalid hostname or API error)
         if (initialResponse.error) {
             return { error: initialResponse.error };
         }
