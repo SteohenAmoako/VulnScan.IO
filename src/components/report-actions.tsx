@@ -1,11 +1,11 @@
 
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { Download, Repeat, Search, MessageSquareWarning, Send } from 'lucide-react';
+import { Download, Repeat, Search, MessageSquareWarning, Send, CheckCircle2 } from 'lucide-react';
 import Link from 'next/link';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
@@ -16,13 +16,11 @@ interface ReportActionsProps {
     url: string;
     report: string;
     summary: string;
-    showFeedbackSuccess: boolean;
 }
 
 function ReportFeedback({ url, summary }: { url: string, summary: string }) {
     const [isSubmitting, setIsSubmitting] = useState(false);
     
-    // Construct the URL to redirect back to, including the success flag
     const nextUrl = new URL(window.location.href);
     nextUrl.searchParams.set('feedback_submitted', 'true');
 
@@ -70,10 +68,13 @@ function ReportFeedback({ url, summary }: { url: string, summary: string }) {
     )
 }
 
-export function ReportActions({ url, report, summary, showFeedbackSuccess }: ReportActionsProps) {
+export function ReportActions({ url, report, summary }: ReportActionsProps) {
     const router = useRouter();
+    const searchParams = useSearchParams();
     const { toast } = useToast();
     const [isReporting, setIsReporting] = useState(false);
+    
+    const showFeedbackSuccess = searchParams.get('feedback_submitted') === 'true';
 
     const handleDownload = async () => {
         const severityChartElement = document.getElementById('severity-chart-card');
