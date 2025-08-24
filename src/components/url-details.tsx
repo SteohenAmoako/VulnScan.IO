@@ -47,7 +47,7 @@ export function URLDetails({ url, domainInfo, sslInfo, mozillaInfo, urlParamAnal
     
     return (
         <div className="container px-4 md:px-6 py-12">
-            <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-4">
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-4">
                 <Card>
                     <CardHeader>
                         <CardTitle className="flex items-center gap-2">
@@ -107,7 +107,7 @@ export function URLDetails({ url, domainInfo, sslInfo, mozillaInfo, urlParamAnal
                     <CardContent>
                         {mozillaInfo && !mozillaInfo.error ? (
                             <div className="flex flex-col gap-4">
-                                <div className="grid grid-cols-2 gap-4 items-center">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-center">
                                     <div className="space-y-2">
                                         <div className="flex items-center gap-2">
                                             <span className="font-semibold">Grade:</span>

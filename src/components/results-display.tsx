@@ -49,6 +49,11 @@ function getSeverityInfo(title: string): { icon: React.ReactNode; variant: "dest
 
 function ReportContent({ content }: { content: string }) {
     try {
+        // First, check if the content is a simple string that looks like a JSON object but is not meant to be one.
+        // E.g., a single line of text with a colon.
+        if (!content.trim().startsWith('{') && !content.trim().startsWith('[')) {
+            throw new Error("Not a JSON object or array.");
+        }
         const parsedData = JSON.parse(content);
         // It is valid JSON, so format it as a key-value list.
         return (

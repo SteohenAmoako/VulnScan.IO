@@ -16,6 +16,7 @@ interface ReportActionsProps {
     url: string;
     report: string;
     summary: string;
+    showFeedbackSuccess: boolean;
 }
 
 function ReportFeedback({ url, summary }: { url: string, summary: string }) {
@@ -68,14 +69,11 @@ function ReportFeedback({ url, summary }: { url: string, summary: string }) {
     )
 }
 
-export function ReportActions({ url, report, summary }: ReportActionsProps) {
+export function ReportActions({ url, report, summary, showFeedbackSuccess }: ReportActionsProps) {
     const router = useRouter();
-    const searchParams = useSearchParams();
     const { toast } = useToast();
     const [isReporting, setIsReporting] = useState(false);
     
-    const showFeedbackSuccess = searchParams.get('feedback_submitted') === 'true';
-
     const handleDownload = async () => {
         const severityChartElement = document.getElementById('severity-chart-card');
         const mozillaChartElement = document.getElementById('mozilla-chart-card');
@@ -189,7 +187,7 @@ export function ReportActions({ url, report, summary }: ReportActionsProps) {
 
     return (
         <div className="flex flex-col items-center gap-4 w-full">
-            <div className="flex flex-wrap items-center justify-center gap-4">
+            <div className="flex flex-wrap items-center justify-center gap-2 md:gap-4">
                 <Button asChild variant="outline">
                     <Link href="/">
                         <Search className="mr-2 h-4 w-4" />
@@ -202,12 +200,12 @@ export function ReportActions({ url, report, summary }: ReportActionsProps) {
                 </Button>
                 <Button variant="outline" onClick={handleDownload}>
                     <Download className="mr-2 h-4 w-4" />
-                    Download Report (PDF)
+                    Download PDF
                 </Button>
                 {!showFeedbackSuccess && (
                      <Button variant="destructive" onClick={() => setIsReporting(!isReporting)}>
                         <MessageSquareWarning className="mr-2 h-4 w-4" />
-                        {isReporting ? 'Cancel Feedback' : 'Report Incorrect Results'}
+                        {isReporting ? 'Cancel' : 'Report Issue'}
                     </Button>
                 )}
             </div>

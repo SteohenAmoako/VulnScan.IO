@@ -33,7 +33,7 @@ export function ScanForm() {
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="flex space-x-2">
+      <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
         <FormField
           control={form.control}
           name="url"
