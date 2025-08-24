@@ -26,7 +26,7 @@ export function SeverityChart({ data }: SeverityChartProps) {
                     A visual summary of the detected vulnerability levels.
                 </CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="p-4 md:p-6">
                 {hasData ? (
                    <Tabs defaultValue="pie" className="w-full">
                         <TabsList className="grid w-full grid-cols-2">

@@ -106,7 +106,7 @@ export function URLDetails({ url, domainInfo, sslInfo, mozillaInfo, urlParamAnal
                     </CardHeader>
                     <CardContent>
                         {mozillaInfo && !mozillaInfo.error ? (
-                            <div className="flex flex-col md:flex-row gap-4">
+                            <div className="flex flex-col md:flex-row gap-4 items-center">
                                 <div className="flex-grow space-y-2">
                                     <div className="flex items-center gap-2">
                                         <span className="font-semibold">Grade:</span>

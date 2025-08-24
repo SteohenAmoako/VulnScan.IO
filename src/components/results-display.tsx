@@ -49,25 +49,27 @@ function getSeverityInfo(title: string): { icon: React.ReactNode; variant: "dest
 
 function ReportContent({ content }: { content: string }) {
     try {
-        if (!content.trim().startsWith('{') && !content.trim().startsWith('[')) {
-            throw new Error("Not a JSON object or array.");
+        // A simple check to see if the content might be a JSON-like string
+        const trimmedContent = content.trim();
+        if ((trimmedContent.startsWith('{') && trimmedContent.endsWith('}')) || (trimmedContent.startsWith('[') && trimmedContent.endsWith(']'))) {
+             const parsedData = JSON.parse(trimmedContent);
+             return (
+                 <div className="p-4 bg-muted rounded-md text-sm text-foreground">
+                     <ul className="space-y-2 font-code">
+                         {Object.entries(parsedData).map(([key, value]) => (
+                             <li key={key} className="flex flex-col">
+                                 <span className="font-semibold text-primary">{key}:</span>
+                                 <span className="pl-4 text-foreground break-words">{String(value)}</span>
+                             </li>
+                         ))}
+                     </ul>
+                 </div>
+             );
         }
-        const parsedData = JSON.parse(content);
-        return (
-            <div className="p-4 bg-muted rounded-md text-sm text-foreground">
-                <ul className="space-y-2 font-code">
-                    {Object.entries(parsedData).map(([key, value]) => (
-                        <li key={key} className="flex flex-col">
-                            <span className="font-semibold text-primary">{key}:</span>
-                            <span className="pl-4 text-foreground break-words">{String(value)}</span>
-                        </li>
-                    ))}
-                </ul>
-            </div>
-        );
+        throw new Error("Not a JSON object or array.");
     } catch (e) {
         return (
-            <div className="p-4 bg-muted rounded-md text-sm text-foreground overflow-x-auto font-code whitespace-pre-wrap">
+            <div className="p-2 md:p-4 bg-muted rounded-md text-sm text-foreground overflow-x-auto font-code whitespace-pre-wrap">
                 {content}
             </div>
         );
