@@ -12,7 +12,7 @@ export default function Loading() {
               <div className="animate-spin rounded-full h-20 w-20 md:h-24 md:w-24 border-t-2 border-b-2 border-primary/50"></div>
             </div>
         </div>
-        <h1 className="text-2xl font-bold tracking-tighter sm:text-3xl md:text-5xl font-headline">Scanning in Progress...</h1>
+        <h1 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl font-headline">Scanning in Progress...</h1>
         <p className="text-muted-foreground text-base md:text-xl mt-2 max-w-prose">Analyzing your website for vulnerabilities. This may take a minute.</p>
       </div>
       {/* Simplified skeleton for mobile, more complex for larger screens */}
