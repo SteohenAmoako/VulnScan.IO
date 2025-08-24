@@ -47,7 +47,7 @@ export function URLDetails({ url, domainInfo, sslInfo, mozillaInfo, urlParamAnal
     
     return (
         <div className="container px-4 md:px-6 py-12">
-            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-4">
+            <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 xl:grid-cols-4">
                 <Card>
                     <CardHeader>
                         <CardTitle className="flex items-center gap-2">
@@ -97,7 +97,7 @@ export function URLDetails({ url, domainInfo, sslInfo, mozillaInfo, urlParamAnal
                         )}
                     </CardContent>
                 </Card>
-                <Card className="lg:col-span-1 xl:col-span-2" id="mozilla-chart-card">
+                <Card className="sm:col-span-2" id="mozilla-chart-card">
                     <CardHeader>
                         <CardTitle className="flex items-center gap-2">
                             <Microscope className="w-6 h-6 text-primary" />
@@ -106,45 +106,43 @@ export function URLDetails({ url, domainInfo, sslInfo, mozillaInfo, urlParamAnal
                     </CardHeader>
                     <CardContent>
                         {mozillaInfo && !mozillaInfo.error ? (
-                            <div className="flex flex-col gap-4">
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-center">
-                                    <div className="space-y-2">
-                                        <div className="flex items-center gap-2">
-                                            <span className="font-semibold">Grade:</span>
-                                            <Badge variant={mozillaGradeInfo.variant}>{mozillaInfo.grade || 'N/A'}</Badge>
-                                        </div>
-                                        <div className="flex items-center gap-2">
-                                            <span className="font-semibold">Score:</span>
-                                            <span className="font-bold">{mozillaInfo.score} / 100</span>
-                                        </div>
+                            <div className="flex flex-col md:flex-row gap-4">
+                                <div className="flex-grow space-y-2">
+                                    <div className="flex items-center gap-2">
+                                        <span className="font-semibold">Grade:</span>
+                                        <Badge variant={mozillaGradeInfo.variant}>{mozillaInfo.grade || 'N/A'}</Badge>
                                     </div>
-                                    <div className="w-full h-24">
-                                         <ResponsiveContainer width="100%" height="100%">
-                                            <PieChart>
-                                                <Pie
-                                                    data={mozillaChartData}
-                                                    cx="50%"
-                                                    cy="50%"
-                                                    labelLine={false}
-                                                    innerRadius={25}
-                                                    outerRadius={40}
-                                                    paddingAngle={2}
-                                                    dataKey="value"
-                                                >
-                                                    {mozillaChartData.map((entry, index) => (
-                                                        <Cell key={`cell-${index}`} fill={entry.fill} />
-                                                    ))}
-                                                </Pie>
-                                                <Tooltip
-                                                    cursor={{ fill: 'transparent' }}
-                                                    contentStyle={{ backgroundColor: 'hsl(var(--background))', border: '1px solid hsl(var(--border))', borderRadius: 'var(--radius)'}}
-                                                    formatter={(value, name) => [value, name]}
-                                                />
-                                            </PieChart>
-                                        </ResponsiveContainer>
+                                    <div className="flex items-center gap-2">
+                                        <span className="font-semibold">Score:</span>
+                                        <span className="font-bold">{mozillaInfo.score} / 100</span>
                                     </div>
+                                     <p className="text-sm text-muted-foreground pt-2">{mozillaGradeInfo.description}</p>
                                 </div>
-                                <p className="text-sm text-muted-foreground">{mozillaGradeInfo.description}</p>
+                                <div className="w-full md:w-32 h-32 flex-shrink-0">
+                                     <ResponsiveContainer width="100%" height="100%">
+                                        <PieChart>
+                                            <Pie
+                                                data={mozillaChartData}
+                                                cx="50%"
+                                                cy="50%"
+                                                labelLine={false}
+                                                innerRadius={30}
+                                                outerRadius={45}
+                                                paddingAngle={2}
+                                                dataKey="value"
+                                            >
+                                                {mozillaChartData.map((entry, index) => (
+                                                    <Cell key={`cell-${index}`} fill={entry.fill} />
+                                                ))}
+                                            </Pie>
+                                            <Tooltip
+                                                cursor={{ fill: 'transparent' }}
+                                                contentStyle={{ backgroundColor: 'hsl(var(--background))', border: '1px solid hsl(var(--border))', borderRadius: 'var(--radius)'}}
+                                                formatter={(value, name) => [value, name]}
+                                            />
+                                        </PieChart>
+                                    </ResponsiveContainer>
+                                </div>
                             </div>
                         ) : (
                              <p className="text-sm text-muted-foreground">{mozillaInfo?.error || 'Mozilla Observatory scan could not be completed.'}</p>

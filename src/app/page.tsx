@@ -1,3 +1,4 @@
+
 import { Header } from '@/components/header';
 import { ScanForm } from '@/components/scan-form';
 import { EducationalResources } from '@/components/educational-resources';
@@ -16,7 +17,7 @@ export default function Home() {
                 <h1 className="text-4xl font-bold tracking-tighter sm:text-5xl md:text-6xl lg:text-7xl/none font-headline text-primary">
                   VulnScan.IO
                 </h1>
-                <p className="mx-auto max-w-[700px] text-muted-foreground md:text-xl">
+                <p className="mx-auto max-w-[700px] text-muted-foreground text-lg md:text-xl">
                   Enter a website URL to scan for security vulnerabilities and receive a comprehensive, educational report.
                 </p>
               </div>

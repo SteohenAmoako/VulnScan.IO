@@ -49,13 +49,10 @@ function getSeverityInfo(title: string): { icon: React.ReactNode; variant: "dest
 
 function ReportContent({ content }: { content: string }) {
     try {
-        // First, check if the content is a simple string that looks like a JSON object but is not meant to be one.
-        // E.g., a single line of text with a colon.
         if (!content.trim().startsWith('{') && !content.trim().startsWith('[')) {
             throw new Error("Not a JSON object or array.");
         }
         const parsedData = JSON.parse(content);
-        // It is valid JSON, so format it as a key-value list.
         return (
             <div className="p-4 bg-muted rounded-md text-sm text-foreground">
                 <ul className="space-y-2 font-code">
@@ -69,7 +66,6 @@ function ReportContent({ content }: { content: string }) {
             </div>
         );
     } catch (e) {
-        // If it's not valid JSON, render as plain text.
         return (
             <div className="p-4 bg-muted rounded-md text-sm text-foreground overflow-x-auto font-code whitespace-pre-wrap">
                 {content}
@@ -97,21 +93,19 @@ export function ResultsDisplay({ url, report, summary }: ResultsDisplayProps) {
     const [isFeedbackVisible, setIsFeedbackVisible] = useState(searchParams.get('feedback_submitted') === 'true');
 
     useEffect(() => {
-        if (isFeedbackVisible) {
+        if (searchParams.get('feedback_submitted') === 'true') {
+            setIsFeedbackVisible(true);
             toast({
                 title: "Feedback Submitted",
                 description: "Thank you for helping us improve our scanner.",
                 variant: "default"
             });
-
             const timer = setTimeout(() => {
                 setIsFeedbackVisible(false);
-            }, 120000); // 2 minutes in milliseconds
-
-            // Cleanup the timer if the component unmounts
+            }, 120000); 
             return () => clearTimeout(timer);
         }
-    }, [isFeedbackVisible, toast]);
+    }, [searchParams, toast]);
 
 
     return (

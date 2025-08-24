@@ -1,3 +1,4 @@
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { BookOpen } from "lucide-react";
 import Link from "next/link";
@@ -38,7 +39,7 @@ export function EducationalResources() {
             </p>
           </div>
         </div>
-        <div className="mx-auto grid max-w-5xl items-stretch gap-8 sm:grid-cols-2 md:gap-12 lg:max-w-none lg:grid-cols-4 mt-12">
+        <div className="mx-auto grid max-w-5xl items-stretch gap-6 sm:grid-cols-2 md:gap-8 lg:max-w-none lg:grid-cols-4 mt-12">
           {resources.map((resource) => (
             <Card key={resource.title} className="flex flex-col">
               <CardHeader className="flex flex-row items-center gap-4">

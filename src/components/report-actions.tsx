@@ -187,7 +187,7 @@ export function ReportActions({ url, report, summary, showFeedbackSuccess }: Rep
 
     return (
         <div className="flex flex-col items-center gap-4 w-full">
-            <div className="flex flex-wrap items-center justify-center gap-2 md:gap-4">
+            <div className="flex flex-wrap items-center justify-center gap-2">
                 <Button asChild variant="outline">
                     <Link href="/">
                         <Search className="mr-2 h-4 w-4" />
