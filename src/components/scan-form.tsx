@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useRouter } from 'next/navigation';
@@ -33,7 +34,7 @@ export function ScanForm() {
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
+      <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col space-y-2 sm:flex-row sm:space-x-2">
         <FormField
           control={form.control}
           name="url"
@@ -46,9 +47,12 @@ export function ScanForm() {
             </FormItem>
           )}
         />
-        <Button type="submit" disabled={isSubmitting} className="min-w-[100px]">
+        <Button type="submit" disabled={isSubmitting} className="min-w-[120px]">
           {isSubmitting ? (
-            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary-foreground"></div>
+            <>
+              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary-foreground mr-2"></div>
+              Processing...
+            </>
           ) : (
             <>
               <Search className="mr-2 h-4 w-4" /> Scan
