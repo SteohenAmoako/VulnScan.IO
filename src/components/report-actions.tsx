@@ -2,7 +2,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { Download, Repeat, Search, MessageSquareWarning, Send } from 'lucide-react';
@@ -16,6 +16,7 @@ interface ReportActionsProps {
     url: string;
     report: string;
     summary: string;
+    showFeedbackSuccess: boolean;
 }
 
 function ReportFeedback({ url, summary }: { url: string, summary: string }) {
@@ -69,18 +70,16 @@ function ReportFeedback({ url, summary }: { url: string, summary: string }) {
     )
 }
 
-export function ReportActions({ url, report, summary }: ReportActionsProps) {
+export function ReportActions({ url, report, summary, showFeedbackSuccess }: ReportActionsProps) {
     const router = useRouter();
     const { toast } = useToast();
     const searchParams = useSearchParams();
     const [isReporting, setIsReporting] = useState(false);
-    const [showFeedbackSuccess, setShowFeedbackSuccess] = useState(false);
 
     useEffect(() => {
         if (searchParams.get('feedback_submitted') === 'true') {
-            setShowFeedbackSuccess(true);
             const timer = setTimeout(() => {
-                setShowFeedbackSuccess(false);
+                // Logic to hide feedback success message can be handled in parent
             }, 10000); // Hide after 10 seconds
             return () => clearTimeout(timer);
         }
