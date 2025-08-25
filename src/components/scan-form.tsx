@@ -12,27 +12,43 @@ import { Search } from 'lucide-react';
 import { useState } from 'react';
 
 const formSchema = z.object({
-  url: z.string()
-    .min(1, { message: "Please enter a URL." })
-    .refine((value) => {
-        try {
-            const url = new URL(value);
-            return url.protocol === 'http:' || url.protocol === 'https:';
-        } catch (_) {
-            // Allow for cases where user doesn't type protocol
-            if (!/^(http|https):\/\//.test(value)) {
-                try {
-                    const url = new URL(`http://${value}`);
-                    return true; // We'll fix it on the server, just validate the host part is ok
-                } catch (e) {
-                    return false;
-                }
-            }
-            return false;
+  url: z.string().superRefine((value, ctx) => {
+    if (!value || value.trim() === "") {
+        ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: "Please enter a URL to scan.",
+        });
+        return;
+    }
+
+    // Check for invalid protocols
+    if (value.includes('://') && !/^(https|http):\/\//.test(value)) {
+        ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: "Invalid protocol. URL must start with http:// or https://",
+        });
+        return;
+    }
+    
+    // Attempt to parse the URL
+    try {
+        const urlToValidate = /^(http|https):\/\//.test(value) ? value : `http://${value}`;
+        const url = new URL(urlToValidate);
+
+        // A basic check to ensure hostname has at least a TLD
+        if (!url.hostname || !url.hostname.includes('.')) {
+            ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                message: "Invalid domain name. Please enter a valid URL.",
+            });
         }
-    }, {
-        message: "Please enter a valid URL (e.g., example.com)."
-    })
+    } catch (_) {
+        ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: "The URL is malformed. Please check for typos.",
+        });
+    }
+  })
 });
 
 export function ScanForm() {
@@ -44,6 +60,7 @@ export function ScanForm() {
     defaultValues: {
       url: '',
     },
+    mode: 'onBlur' // Validate on blur for better user experience
   });
 
   function onSubmit(values: z.infer<typeof formSchema>) {
