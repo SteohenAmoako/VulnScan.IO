@@ -2,10 +2,10 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { Download, Repeat, Search, MessageSquareWarning, Send, CheckCircle2 } from 'lucide-react';
+import { Download, Repeat, Search, MessageSquareWarning, Send } from 'lucide-react';
 import Link from 'next/link';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
@@ -16,17 +16,17 @@ interface ReportActionsProps {
     url: string;
     report: string;
     summary: string;
-    showFeedbackSuccess: boolean;
 }
 
 function ReportFeedback({ url, summary }: { url: string, summary: string }) {
     const [isSubmitting, setIsSubmitting] = useState(false);
     
+    // This will redirect the user back to the current page with a success query param
     const nextUrl = new URL(window.location.href);
     nextUrl.searchParams.set('feedback_submitted', 'true');
 
     return (
-        <Card className="mt-6 border-destructive/50 w-full max-w-lg">
+        <Card className="mt-6 border-destructive/50">
             <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-destructive">
                     <MessageSquareWarning className="w-6 h-6" />
@@ -69,11 +69,23 @@ function ReportFeedback({ url, summary }: { url: string, summary: string }) {
     )
 }
 
-export function ReportActions({ url, report, summary, showFeedbackSuccess }: ReportActionsProps) {
+export function ReportActions({ url, report, summary }: ReportActionsProps) {
     const router = useRouter();
     const { toast } = useToast();
+    const searchParams = useSearchParams();
     const [isReporting, setIsReporting] = useState(false);
-    
+    const [showFeedbackSuccess, setShowFeedbackSuccess] = useState(false);
+
+    useEffect(() => {
+        if (searchParams.get('feedback_submitted') === 'true') {
+            setShowFeedbackSuccess(true);
+            const timer = setTimeout(() => {
+                setShowFeedbackSuccess(false);
+            }, 10000); // Hide after 10 seconds
+            return () => clearTimeout(timer);
+        }
+    }, [searchParams]);
+
     const handleDownload = async () => {
         const severityChartElement = document.getElementById('severity-chart-card');
         const mozillaChartElement = document.getElementById('mozilla-chart-card');
@@ -86,107 +98,136 @@ export function ReportActions({ url, report, summary, showFeedbackSuccess }: Rep
             });
             return;
         }
-
+    
         toast({
             title: "Generating PDF...",
             description: "Please wait while your report is being prepared.",
         });
+    
+        try {
+            const severityCanvas = await html2canvas(severityChartElement, { scale: 2, useCORS: true, backgroundColor: '#ffffff' });
+            const mozillaCanvas = await html2canvas(mozillaChartElement, { scale: 2, useCORS: true, backgroundColor: '#ffffff' });
+            
+            const severityImgData = severityCanvas.toDataURL('image/png');
+            const mozillaImgData = mozillaCanvas.toDataURL('image/png');
+    
+            const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+            const pageWidth = doc.internal.pageSize.getWidth();
+            const margin = 15;
+            const maxLineWidth = pageWidth - margin * 2;
+            let currentY = margin;
 
-        const severityCanvas = await html2canvas(severityChartElement, { backgroundColor: null, scale: 2 });
-        const mozillaCanvas = await html2canvas(mozillaChartElement, { backgroundColor: null, scale: 2 });
-        const severityImgData = severityCanvas.toDataURL('image/png');
-        const mozillaImgData = mozillaCanvas.toDataURL('image/png');
+            const addText = (text: string, size: number, style: 'normal' | 'bold' = 'normal', color: string | number[] = '#000000', options: { align?: 'center' | 'left' | 'right', lineSpacing?: number } = {}) => {
+                if (currentY > doc.internal.pageSize.getHeight() - margin) {
+                    doc.addPage();
+                    currentY = margin;
+                }
+                doc.setFontSize(size);
+                doc.setFont('helvetica', style);
+                if (Array.isArray(color)) {
+                    doc.setTextColor(color[0], color[1], color[2]);
+                } else {
+                    doc.setTextColor(color);
+                }
 
-        const doc = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' });
-        const pageWidth = doc.internal.pageSize.getWidth();
-        const margin = 25; // 2.5cm
-        const maxLineWidth = pageWidth - margin * 2;
-        const lineSpacing = 1.5;
+                const lines = doc.splitTextToSize(text, maxLineWidth);
+                const align = options.align || 'left';
+                const xPos = align === 'center' ? pageWidth / 2 : margin;
+                
+                doc.text(lines, xPos, currentY, { align, lineHeightFactor: options.lineSpacing || 1.15 });
+                currentY += (lines.length * size * 0.35) + 3; // Approximate height of text block
+            };
 
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(18);
-        doc.text(`Vulnerability Scan Report`, pageWidth / 2, 20, { align: 'center' });
-        
-        doc.setFontSize(12);
-        doc.setFont('helvetica', 'normal');
-        doc.text(`URL: ${url}`, pageWidth / 2, 28, { align: 'center' });
-        doc.text(`Generated on: ${new Date().toUTCString()}`, pageWidth / 2, 34, { align: 'center' });
+            // Header
+            addText('Vulnerability Scan Report', 18, 'bold', '#673AB7', { align: 'center' });
+            currentY += 5;
+            
+            // URL and Date
+            addText(`Target: ${url}`, 10, 'normal', '#333333');
+            addText(`Report Generated: ${new Date().toLocaleString()}`, 8, 'normal', '#666666');
+            currentY += 5;
 
-        let y = 50;
+            // Summary
+            addText('Executive Summary', 14, 'bold', '#009688');
+            doc.setDrawColor('#009688');
+            doc.line(margin, currentY, maxLineWidth + margin, currentY);
+            currentY += 5;
+            addText(summary.replace(/\*\*/g, ''), 10);
+            currentY += 10;
+            
+            // Charts
+            const chartWidth = (maxLineWidth / 2) - 5;
+            const severityHeight = (severityCanvas.height * chartWidth) / severityCanvas.width;
+            const mozillaHeight = (mozillaCanvas.height * chartWidth) / mozillaCanvas.width;
+            const chartSectionHeight = Math.max(severityHeight, mozillaHeight) + 20;
 
-        doc.setFontSize(14);
-        doc.setFont('helvetica', 'bold');
-        doc.text('AI-Generated Summary', margin, y);
-        y += 8;
-        
-        doc.setFontSize(10);
-        doc.setFont('helvetica', 'normal');
-        const summaryLines = doc.splitTextToSize(summary, maxLineWidth);
-        doc.text(summaryLines, margin, y, { lineHeightFactor: lineSpacing });
-        y += (summaryLines.length * 4 * lineSpacing) + 5;
-
-        if (y > 250) { 
-            doc.addPage();
-            y = 20;
-        }
-
-        doc.setFontSize(14);
-        doc.setFont('helvetica', 'bold');
-        doc.text('Visual Summaries', margin, y);
-        y += 10;
-        
-        const chartWidth = (pageWidth - (margin * 3)) / 2;
-        const severityImgHeight = (severityCanvas.height * chartWidth) / severityCanvas.width;
-        const mozillaImgHeight = (mozillaCanvas.height * chartWidth) / mozillaCanvas.width;
-
-        doc.addImage(severityImgData, 'PNG', margin, y, chartWidth, severityImgHeight);
-        doc.addImage(mozillaImgData, 'PNG', margin + chartWidth + 10, y, chartWidth, mozillaImgHeight);
-        y += Math.max(severityImgHeight, mozillaImgHeight) + 10;
-
-        doc.setDrawColor(200, 200, 200);
-        doc.line(margin, y, pageWidth - margin, y);
-        y += 10;
-        
-        doc.setFontSize(14);
-        doc.setFont('helvetica', 'bold');
-        doc.text('Detailed Vulnerability Report', margin, y);
-        y += 8;
-        
-        doc.setFont('helvetica', 'normal');
-        doc.setFontSize(10);
-
-        const sections = report.split('**').map(s => s.trim()).filter(Boolean);
-        for (let i = 0; i < sections.length; i += 2) {
-            const title = sections[i].replace(/:$/, '');
-            const content = sections[i + 1] || 'No details provided.';
-
-            if (y > 270) {
+            if (currentY + chartSectionHeight > doc.internal.pageSize.getHeight() - margin) {
                 doc.addPage();
-                y = 20;
+                currentY = margin;
+            }
+            addText('Security Metrics', 14, 'bold', '#009688');
+            doc.line(margin, currentY, maxLineWidth + margin, currentY);
+            currentY += 5;
+            doc.addImage(severityImgData, 'PNG', margin, currentY, chartWidth, severityHeight);
+            doc.addImage(mozillaImgData, 'PNG', margin + chartWidth + 10, currentY, chartWidth, mozillaHeight);
+            currentY += chartSectionHeight;
+
+            // Detailed Findings
+            addText('Detailed Vulnerability Findings', 14, 'bold', '#009688');
+            doc.line(margin, currentY, maxLineWidth + margin, currentY);
+            currentY += 5;
+            
+            const parsedReport = JSON.parse(report);
+            if(Array.isArray(parsedReport)) {
+                parsedReport.forEach(vuln => {
+                    if (currentY + 40 > doc.internal.pageSize.getHeight() - margin) { // Check space before adding new item
+                        doc.addPage();
+                        currentY = margin;
+                    }
+                    doc.setFillColor(245, 245, 245); // Light gray background
+                    doc.rect(margin, currentY - 5, maxLineWidth, 3, 'F');
+                    currentY -= 2;
+
+                    addText(`${vuln.vulnerabilityName} (${vuln.severity})`, 12, 'bold');
+                    currentY += 2;
+
+                    addText('Description:', 10, 'bold');
+                    addText(vuln.description, 9);
+                    
+                    addText('Evidence:', 10, 'bold');
+                    addText(vuln.evidence, 9);
+
+                    addText('Remediation:', 10, 'bold');
+                    addText(vuln.remediation, 9);
+                    currentY += 5;
+                });
             }
 
-            doc.setFont('helvetica', 'bold');
-            doc.setFontSize(12);
-            doc.text(title, margin, y);
-            y += 6;
-
-            doc.setFont('helvetica', 'normal');
-            doc.setFontSize(10);
-            const contentLines = doc.splitTextToSize(content.replace(/<br\s*\/?>/gi, '\n'), maxLineWidth);
-            doc.text(contentLines, margin, y, { lineHeightFactor: lineSpacing });
-            y += (contentLines.length * 4 * lineSpacing) + 4;
-        }
-
-        doc.save(`VulnScan-Report-${new URL(url).hostname}.pdf`);
-    };
+            const urlHostname = new URL(url).hostname;
+            const filename = `VulnScan-Report-${urlHostname}-${new Date().toISOString().split('T')[0]}.pdf`;
+            doc.save(filename);
     
+            toast({
+                title: "PDF Generated Successfully",
+                description: `Report saved as ${filename}`,
+            });
+    
+        } catch (error) {
+            console.error('Error generating PDF:', error);
+            toast({
+                title: "Error Generating PDF",
+                description: "There was an issue creating the PDF report. Please try again.",
+                variant: "destructive"
+            });
+        }
+    };
     const handleRescan = () => {
         const randomQuery = `&t=${new Date().getTime()}`;
         router.push(`/scan?url=${encodeURIComponent(url)}${randomQuery}`);
     };
 
     return (
-        <div className="flex flex-col items-center gap-4 w-full">
+        <div className="flex flex-col items-center gap-4">
             <div className="flex flex-wrap items-center justify-center gap-2">
                 <Button asChild variant="outline">
                     <Link href="/">
