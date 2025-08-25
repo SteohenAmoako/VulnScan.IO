@@ -16,7 +16,6 @@ interface ReportActionsProps {
     url: string;
     report: string;
     summary: string;
-    showFeedbackSuccess: boolean;
 }
 
 function ReportFeedback({ url, summary }: { url: string, summary: string }) {
@@ -36,7 +35,7 @@ function ReportFeedback({ url, summary }: { url: string, summary: string }) {
             </CardHeader>
             <CardContent>
                 <form
-                    action="https://formsubmit.co/stevekobbi20@gmail.com"
+                    action="https://formsubmit.co/lilmeech0011@icloud.com"
                     method="POST"
                     onSubmit={() => setIsSubmitting(true)}
                     className="space-y-4"
@@ -70,16 +69,18 @@ function ReportFeedback({ url, summary }: { url: string, summary: string }) {
     )
 }
 
-export function ReportActions({ url, report, summary, showFeedbackSuccess }: ReportActionsProps) {
+export function ReportActions({ url, report, summary }: ReportActionsProps) {
     const router = useRouter();
     const { toast } = useToast();
     const searchParams = useSearchParams();
     const [isReporting, setIsReporting] = useState(false);
+    const [showFeedbackSuccess, setShowFeedbackSuccess] = useState(searchParams.get('feedback_submitted') === 'true');
 
     useEffect(() => {
         if (searchParams.get('feedback_submitted') === 'true') {
+            setShowFeedbackSuccess(true);
             const timer = setTimeout(() => {
-                // Logic to hide feedback success message can be handled in parent
+                setShowFeedbackSuccess(false);
             }, 10000); // Hide after 10 seconds
             return () => clearTimeout(timer);
         }
@@ -134,7 +135,7 @@ export function ReportActions({ url, report, summary, showFeedbackSuccess }: Rep
                 const xPos = align === 'center' ? pageWidth / 2 : margin;
                 
                 doc.text(lines, xPos, currentY, { align, lineHeightFactor: options.lineSpacing || 1.15 });
-                currentY += (lines.length * size * 0.35) + 3; // Approximate height of text block
+                currentY += (lines.length * size * 0.35 * (options.lineSpacing || 1.15)) + 3; // Approximate height of text block
             };
 
             // Header
@@ -179,17 +180,20 @@ export function ReportActions({ url, report, summary, showFeedbackSuccess }: Rep
             const parsedReport = JSON.parse(report);
             if(Array.isArray(parsedReport)) {
                 parsedReport.forEach(vuln => {
-                    if (currentY + 40 > doc.internal.pageSize.getHeight() - margin) { // Check space before adding new item
+                     const vulnerabilityText = `Vulnerability: ${vuln.vulnerabilityName} (Severity: ${vuln.severity})\nDescription: ${vuln.description}\nEvidence: ${vuln.evidence}\nRemediation: ${vuln.remediation}`;
+                     const textLines = doc.splitTextToSize(vulnerabilityText, maxLineWidth);
+                     const textHeight = (textLines.length * 10 * 0.35 * 1.15) + 20;
+
+                    if (currentY + textHeight > doc.internal.pageSize.getHeight() - margin) { 
                         doc.addPage();
                         currentY = margin;
                     }
-                    doc.setFillColor(245, 245, 245); // Light gray background
-                    doc.rect(margin, currentY - 5, maxLineWidth, 3, 'F');
-                    currentY -= 2;
-
+                    
+                    doc.setFillColor(245, 245, 245);
+                    doc.rect(margin - 2, currentY - 5, maxLineWidth + 4, textHeight, 'F');
+                    
                     addText(`${vuln.vulnerabilityName} (${vuln.severity})`, 12, 'bold');
-                    currentY += 2;
-
+                    
                     addText('Description:', 10, 'bold');
                     addText(vuln.description, 9);
                     
