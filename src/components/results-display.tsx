@@ -4,11 +4,19 @@
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { AlertCircle, CheckCircle2, ShieldQuestion, FileText, Bot } from 'lucide-react';
+import { AlertCircle, CheckCircle2, ShieldQuestion, FileText, Bot, ShieldAlert, ShieldCheck, ShieldClose, Info, ChevronRight, AlertTriangle } from 'lucide-react';
 import { Badge } from "@/components/ui/badge";
 import { ReportActions } from "./report-actions";
 import { useToast } from '@/hooks/use-toast';
+import { Separator } from './ui/separator';
+
+interface Vulnerability {
+    vulnerabilityName: string;
+    severity: "Critical" | "High" | "Medium" | "Low" | "Informational";
+    description: string;
+    evidence: string;
+    remediation: string;
+}
 
 interface ResultsDisplayProps {
     url: string;
@@ -16,79 +24,25 @@ interface ResultsDisplayProps {
     summary: string;
 }
 
-function parseReport(reportText: string) {
-    const sections = reportText.split('**').map(s => s.trim()).filter(Boolean);
-    const result = [];
-    for (let i = 0; i < sections.length; i += 2) {
-        const title = sections[i].replace(/:$/, '');
-        const content = sections[i + 1];
-        if (title && content) {
-            result.push({ title, content });
-        }
-    }
-
-    if (result.length === 0 && reportText.trim()) {
-        return [{ title: "Full Report", content: reportText }];
-    }
-    return result;
-}
-
-function getSeverityInfo(title: string): { icon: React.ReactNode; variant: "destructive" | "secondary" | "default"; level: string } {
-    const lowerCaseTitle = title.toLowerCase();
-    if (lowerCaseTitle.includes('high') || lowerCaseTitle.includes('critical') || lowerCaseTitle.includes('detected threats')) {
-        return { icon: <AlertCircle className="w-5 h-5 text-destructive" />, variant: 'destructive', level: "High" };
-    }
-    if (lowerCaseTitle.includes('medium') || lowerCaseTitle.includes('moderate')) {
-        return { icon: <ShieldQuestion className="w-5 h-5 text-yellow-500" />, variant: 'secondary', level: 'Medium' };
-    }
-    if (lowerCaseTitle.includes('low') || lowerCaseTitle.includes('informational') || lowerCaseTitle.includes('no threats') || lowerCaseTitle.includes('overall status')) {
-        return { icon: <CheckCircle2 className="w-5 h-5 text-green-500" />, variant: 'default', level: 'Info' };
-    }
-    return { icon: <FileText className="w-5 h-5 text-muted-foreground" />, variant: 'default', level: 'Info' };
-}
-
-function ReportContent({ content }: { content: string }) {
-    try {
-        // A simple check to see if the content might be a JSON-like string
-        const trimmedContent = content.trim();
-        if ((trimmedContent.startsWith('{') && trimmedContent.endsWith('}')) || (trimmedContent.startsWith('[') && trimmedContent.endsWith(']'))) {
-             const parsedData = JSON.parse(trimmedContent);
-             return (
-                 <div className="p-4 bg-muted rounded-md text-sm text-foreground">
-                     <ul className="space-y-2 font-code">
-                         {Object.entries(parsedData).map(([key, value]) => (
-                             <li key={key} className="flex flex-col">
-                                 <span className="font-semibold text-primary">{key}:</span>
-                                 <span className="pl-4 text-foreground break-words">{String(value)}</span>
-                             </li>
-                         ))}
-                     </ul>
-                 </div>
-             );
-        }
-        throw new Error("Not a JSON object or array.");
-    } catch (e) {
-        return (
-            <div className="p-2 md:p-4 bg-muted rounded-md text-sm text-foreground overflow-x-auto font-code whitespace-pre-wrap">
-                {content}
-            </div>
-        );
-    }
-}
+const severityConfig = {
+    "Critical": { icon: <ShieldAlert className="w-5 h-5 text-red-700" />, badgeClass: "bg-red-700 hover:bg-red-800 text-white border-red-800" },
+    "High": { icon: <ShieldClose className="w-5 h-5 text-red-500" />, badgeClass: "bg-red-500 hover:bg-red-600 text-white border-red-600" },
+    "Medium": { icon: <ShieldQuestion className="w-5 h-5 text-amber-500" />, badgeClass: "bg-amber-500 hover:bg-amber-600 text-white border-amber-600" },
+    "Low": { icon: <ShieldCheck className="w-5 h-5 text-blue-500" />, badgeClass: "bg-blue-500 hover:bg-blue-600 text-white border-blue-600" },
+    "Informational": { icon: <Info className="w-5 h-5 text-gray-500" />, badgeClass: "bg-gray-500 hover:bg-gray-600 text-white border-gray-600" },
+};
 
 function FeedbackSuccessMessage() {
      return (
-        <div className="text-center p-4 my-6 bg-green-100 dark:bg-green-900/50 border border-green-200 dark:border-green-800 rounded-lg">
-            <CheckCircle2 className="w-8 h-8 mx-auto text-green-600 dark:text-green-400 mb-2" />
-            <p className="font-semibold text-green-800 dark:text-green-200">Thank you for your feedback!</p>
-            <p className="text-sm text-green-700 dark:text-green-300">Your insights help improve the scanner.</p>
+        <div className="text-center p-3 sm:p-4 md:p-5 lg:p-6 my-4 sm:my-5 md:my-6 bg-green-100 dark:bg-green-900/50 border border-green-200 dark:border-green-800 rounded-lg mx-auto max-w-full">
+            <CheckCircle2 className="w-6 h-6 sm:w-7 sm:h-7 md:w-8 md:h-8 mx-auto text-green-600 dark:text-green-400 mb-2" />
+            <p className="font-semibold text-sm sm:text-base md:text-lg text-green-800 dark:text-green-200 break-words">Thank you for your feedback!</p>
+            <p className="text-xs sm:text-sm md:text-base text-green-700 dark:text-green-300 break-words">Your insights help improve the scanner.</p>
         </div>
     );
 }
 
-
 export function ResultsDisplay({ url, report, summary }: ResultsDisplayProps) {
-    const reportSections = parseReport(report);
     const searchParams = useSearchParams();
     const { toast } = useToast();
     
@@ -108,71 +62,109 @@ export function ResultsDisplay({ url, report, summary }: ResultsDisplayProps) {
             return () => clearTimeout(timer);
         }
     }, [searchParams, toast]);
-
+    
+    let parsedReport: Vulnerability[] = [];
+    try {
+        parsedReport = JSON.parse(report);
+        if (!Array.isArray(parsedReport)) {
+            throw new Error("Report is not an array");
+        }
+    } catch (e) {
+        console.error("Failed to parse scan report JSON:", e);
+        // Create a fallback entry if parsing fails
+        parsedReport.push({
+            vulnerabilityName: "Report Generation Error",
+            severity: "High",
+            description: "The AI model returned a malformed report that could not be displayed properly.",
+            evidence: "The raw report data was not in the expected JSON array format.",
+            remediation: "This may be a temporary issue with the AI service. Please try rescanning the URL. If the problem persists, consider submitting feedback."
+        });
+    }
 
     return (
-        <div className="space-y-8">
-            <div className="text-center">
-                <h1 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl font-headline">Scan Complete</h1>
-                <p className="text-muted-foreground md:text-xl mt-2">
-                    Results for: <span className="font-medium text-primary break-all">{url}</span>
+        <div className="space-y-4 sm:space-y-5 md:space-y-6 lg:space-y-7 xl:space-y-8 w-full max-w-full px-2 sm:px-3 md:px-4 lg:px-0">
+            <div className="text-center space-y-2 sm:space-y-3 md:space-y-4">
+                <h1 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl xl:text-5xl font-bold tracking-tighter font-headline break-words px-2 sm:px-0">
+                    Scan Complete
+                </h1>
+                <p className="text-sm sm:text-base md:text-lg lg:text-xl text-muted-foreground break-all px-2 sm:px-4 md:px-0 mt-1 sm:mt-2">
+                    Results for: <span className="font-medium text-primary">{url}</span>
                 </p>
             </div>
             
-            <ReportActions url={url} report={report} summary={summary} showFeedbackSuccess={isFeedbackVisible} />
+            <div className="w-full overflow-hidden">
+                <ReportActions url={url} report={report} summary={summary} showFeedbackSuccess={isFeedbackVisible} />
+            </div>
 
             {isFeedbackVisible && <FeedbackSuccessMessage />}
 
-            <Card>
+            <Card className="w-full max-w-full overflow-hidden">
                 <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                        <Bot className="w-6 h-6 text-accent" />
-                        AI Summary
+                    <CardTitle className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-3 text-base sm:text-lg md:text-xl lg:text-2xl xl:text-3xl break-words">
+                        <Bot className="w-5 h-5 sm:w-6 sm:h-6 md:w-7 md:h-7 text-accent flex-shrink-0" />
+                        <span>Executive Summary</span>
                     </CardTitle>
-                    <CardDescription>
-                        A quick, easy-to-understand summary of all findings.
+                    <CardDescription className="text-xs sm:text-sm md:text-base break-words">
+                        A high-level overview of the security assessment.
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
-                    <p className="text-sm leading-relaxed whitespace-pre-wrap">{summary}</p>
+                    <p className="text-xs sm:text-sm md:text-base leading-relaxed whitespace-pre-wrap break-words overflow-hidden">
+                        {summary}
+                    </p>
                 </CardContent>
             </Card>
 
-            <Card>
+            <Card className="w-full max-w-full overflow-hidden">
                 <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                        <FileText className="w-6 h-6 text-primary" />
-                        Detailed Vulnerability Report
+                    <CardTitle className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-3 text-base sm:text-lg md:text-xl lg:text-2xl xl:text-3xl break-words">
+                        <FileText className="w-5 h-5 sm:w-6 sm:h-6 md:w-7 md:h-7 text-primary flex-shrink-0" />
+                        <span>Detailed Vulnerability Findings</span>
                     </CardTitle>
-                    <CardDescription>
-                        A breakdown of potential vulnerabilities found by the scanner.
+                    <CardDescription className="text-xs sm:text-sm md:text-base break-words">
+                        A breakdown of all identified security issues and recommendations.
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
-                    {reportSections.length > 0 ? (
-                        <Accordion type="single" collapsible className="w-full" defaultValue="item-0">
-                            {reportSections.map((section, index) => {
-                                const { icon, variant, level } = getSeverityInfo(section.title);
+                    {parsedReport.length > 0 ? (
+                        <div className="space-y-6">
+                            {parsedReport.map((vuln, index) => {
+                                const config = severityConfig[vuln.severity] || severityConfig.Informational;
                                 return (
-                                    <AccordionItem value={`item-${index}`} key={index}>
-                                        <AccordionTrigger className="text-left hover:no-underline gap-3">
-                                            <div className="flex items-center gap-3 flex-grow">
-                                                {icon}
-                                                <span className="font-semibold">{section.title}</span>
+                                    <div key={index} className="border-l-4 rounded-r-md p-4 bg-card" style={{ borderColor: config.badgeClass.match(/bg-([a-z]+)-(\d+)/)?.[0].replace('bg-', 'hsl(var(--')) || 'hsl(var(--border))' }}>
+                                        <div className="flex justify-between items-start gap-4">
+                                            <div className="flex-grow">
+                                                <h3 className="text-lg font-semibold flex items-center gap-2">
+                                                    {config.icon} {vuln.vulnerabilityName}
+                                                </h3>
                                             </div>
-                                            <Badge variant={variant}>{level}</Badge>
-                                        </AccordionTrigger>
-                                        <AccordionContent>
-                                            <ReportContent content={section.content} />
-                                        </AccordionContent>
-                                    </AccordionItem>
+                                            <Badge className={config.badgeClass}>{vuln.severity}</Badge>
+                                        </div>
+                                        <Separator className="my-3" />
+                                        <div className="space-y-4 text-sm text-muted-foreground">
+                                            <div>
+                                                <h4 className="font-semibold text-foreground mb-1">Description</h4>
+                                                <p className="whitespace-pre-wrap">{vuln.description}</p>
+                                            </div>
+                                            <div>
+                                                <h4 className="font-semibold text-foreground mb-1">Evidence</h4>
+                                                <p className="font-mono text-xs bg-muted p-2 rounded-md break-all">{vuln.evidence}</p>
+                                            </div>
+                                            <div>
+                                                <h4 className="font-semibold text-foreground mb-1">Remediation</h4>
+                                                <p className="whitespace-pre-wrap">{vuln.remediation}</p>
+                                            </div>
+                                        </div>
+                                    </div>
                                 )
                             })}
-                        </Accordion>
+                        </div>
                     ) : (
-                        <div className="text-center py-8 text-muted-foreground">
-                            <CheckCircle2 className="w-12 h-12 mx-auto mb-4 text-green-500" />
-                            <p>No vulnerabilities were detailed in the report.</p>
+                        <div className="text-center py-6 sm:py-7 md:py-8 lg:py-10 text-muted-foreground">
+                            <CheckCircle2 className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 lg:w-14 lg:h-14 mx-auto mb-3 sm:mb-4 text-green-500" />
+                            <p className="text-sm sm:text-base md:text-lg break-words px-4 sm:px-6 md:px-8">
+                                Congratulations! No vulnerabilities were identified in the scan.
+                            </p>
                         </div>
                     )}
                 </CardContent>

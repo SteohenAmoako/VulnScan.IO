@@ -40,7 +40,6 @@ const MALICIOUS_PATTERNS = [
   { label: 'XSS: img with onerror', regex: /<img\b[^>]*onerror\s*=\s*["'][^"']*["']/i },
   { label: 'XSS: Object/embed injection', regex: /<(object|embed|applet)[^>]*>/i },
   { label: 'XSS: SVG Injection', regex: /<svg\b[^>]*on\w+\s*=/i },
-
   // 🛢️ SQL Injection (SQLi)
   { label: 'SQLi: UNION SELECT', regex: /union\s+select/i },
   { label: 'SQLi: OR 1=1', regex: /(['"`])?\s*or\s+1\s*=\s*1/i },
@@ -52,30 +51,24 @@ const MALICIOUS_PATTERNS = [
   { label: 'SQLi: SELECT * FROM', regex: /select\s+\*\s+from/i },
   { label: 'SQLi: UPDATE Statement', regex: /update\s+\w+\s+set/i },
   { label: 'SQLi: xp_cmdshell (SQL Server)', regex: /xp_cmdshell/i },
-
   // 🐚 Command Injection
   { label: 'CMDi: Semicolon Injection', regex: /;[\s\S]*\b(sh|bash|cmd|powershell)\b/i },
   { label: 'CMDi: Pipe Injection', regex: /\|\s*(ls|cat|whoami|nc|curl|wget|rm|touch)/i },
   { label: 'CMDi: Backtick Execution', regex: /`.*`/ },
   { label: 'CMDi: Subshell $(...)', regex: /\$\((.*?)\)/ },
-
   // 🗂️ Path Traversal
   { label: 'Path Traversal: ../', regex: /(\.\.\/)+/ },
   { label: 'Path Traversal: Windows-style', regex: /(\.\.\\)+/ },
   { label: 'Path Traversal: Double Encoded', regex: /%252e%252e%252f/i },
-
   // 🛡️ Local File Inclusion (LFI)
   { label: 'LFI: /etc/passwd', regex: /\/etc\/passwd/i },
   { label: 'LFI: boot.ini', regex: /boot\.ini/i },
   { label: 'LFI: Windows win.ini', regex: /win\.ini/i },
-
   // 🧬 LDAP Injection
   { label: 'LDAPi: Always True Filter', regex: /\(\|\)/ },
   { label: 'LDAPi: Wildcard Injection', regex: /\*\)|\(|\*/ },
-
   // 💥 Shellshock
   { label: 'Shellshock: Bash function definition', regex: /\(\)\s*\{\s*:\s*;\s*\};/ },
-
   // 🕸️ Other Suspicious Patterns
   { label: 'Base64-like payload', regex: /([A-Za-z0-9+/]{20,}={0,2})/ },
   { label: 'Suspicious Query Parameter Key (e.g. token, auth)', regex: /\b(token|auth|password|passwd|secret)\b/i },
@@ -108,23 +101,6 @@ function analyzeUrlParameters(inputUrl: string) {
     }
 }
 
-// Helper to get stats from the raw report text. This is a bit brittle but works for this use case.
-function getStatsFromReport(report: string): { malicious: number; suspicious: number; harmless: number } {
-    const stats = { malicious: 0, suspicious: 0, harmless: 0 };
-    try {
-        const maliciousMatch = report.match(/(\d+)\s+engines\s+flagged\s+the\s+site\s+as\s+malicious/i);
-        const suspiciousMatch = report.match(/(\d+)\s+as\s+suspicious/i);
-        const harmlessMatch = report.match(/(\d+)\s+as\s+harmless/i);
-
-        if (maliciousMatch) stats.malicious = parseInt(maliciousMatch[1], 10);
-        if (suspiciousMatch) stats.suspicious = parseInt(suspiciousMatch[1], 10);
-        if (harmlessMatch) stats.harmless = parseInt(harmlessMatch[1], 10);
-    } catch (e) {
-        // Ignore if report format is not as expected
-    }
-    return stats;
-}
-
 const getMozillaGradeInfo = (grade: string | undefined) => {
     if (!grade) return { variant: 'secondary' as const, description: 'The grade could not be determined.' };
     switch (grade) {
@@ -146,7 +122,6 @@ const getMozillaGradeInfo = (grade: string | undefined) => {
     }
 };
 
-
 async function ScanResults({ url }: { url: string }) {
   let decodedUrl: string;
   let domain: string;
@@ -165,12 +140,7 @@ async function ScanResults({ url }: { url: string }) {
   try {
     const isHttps = new URL(decodedUrl).protocol === 'https:';
     const urlParamAnalysis = analyzeUrlParameters(decodedUrl);
-
-    // For the prototype, we'll scan for a few common technologies.
-    // A more advanced version could try to identify technologies from the page.
     const technologiesToScan = ['apache', 'nginx', 'openssl', 'react'];
-
-    // Fetch all data in parallel
     const [domainInfo, sslInfo, mozillaInfo, safeBrowsingInfo, ...nvdResults] = await Promise.all([
         getDomainInfo({ domain }),
         isHttps ? getSslInfo({ host: domain }) : Promise.resolve(null),
@@ -180,11 +150,7 @@ async function ScanResults({ url }: { url: string }) {
     ]);
 
     const mozillaGradeInfo = getMozillaGradeInfo(mozillaInfo?.grade);
-
-    // Filter out NVD results that have no vulnerabilities
     const relevantNvdResults = nvdResults.filter(r => r && r.totalResults > 0);
-
-    // VirusTotal scan depends on the URL, other data can be passed to it
     const scanResult = await scanWebsite({
       url: decodedUrl,
       sslInfo: sslInfo ?? undefined,
@@ -196,93 +162,78 @@ async function ScanResults({ url }: { url: string }) {
       safeBrowsingInfo: safeBrowsingInfo,
     });
 
-    // Now, create the summary with all the data gathered
     const summaryContext = {
         report: scanResult.scanReport,
         isHttps,
         urlParamFindings: urlParamAnalysis.findings,
-        sslInfo: sslInfo ?? undefined,
-        mozillaInfo: mozillaInfo ? {
-            ...mozillaInfo,
-            description: mozillaGradeInfo.description
-        } : undefined,
     };
 
     const summaryResult = await summarizeVulnerabilityReport(summaryContext);
 
-    // Calculate Severity with a weighted approach
-    const stats = getStatsFromReport(scanResult.scanReport);
-    let highSeverity = (stats.malicious * 3) + (!isHttps ? 2 : 0);
-    let mediumSeverity = stats.suspicious * 2;
-    let lowSeverity = 0; // For informational items
-
-    if (safeBrowsingInfo.matches && safeBrowsingInfo.matches.length > 0) {
-        highSeverity += safeBrowsingInfo.matches.length;
+    let parsedReport = [];
+    try {
+        parsedReport = JSON.parse(scanResult.scanReport);
+    } catch(e) {
+        console.error("Failed to parse scan report JSON:", e);
+        // If parsing fails, we can create a fallback report entry
+        parsedReport.push({
+            vulnerabilityName: "Report Generation Error",
+            severity: "High",
+            description: "The AI model returned a malformed report that could not be displayed.",
+            evidence: "The raw report data was not valid JSON.",
+            remediation: "This may be a temporary issue with the AI service. Please try rescanning."
+        });
     }
 
-    urlParamAnalysis.findings.forEach(finding => {
-        if (finding.matches.length > 0) {
-            mediumSeverity += finding.matches.length;
+    const severityCounts = {
+        'Critical': 0,
+        'High': 0,
+        'Medium': 0,
+        'Low': 0,
+        'Informational': 0,
+    };
+
+    parsedReport.forEach((vuln: { severity: string }) => {
+        if (vuln.severity in severityCounts) {
+            (severityCounts as any)[vuln.severity]++;
         }
     });
-
-    if (sslInfo && !sslInfo.error && sslInfo.grade) {
-        if (['A+', 'A'].includes(sslInfo.grade)) {
-           // Good grade, no severity increase
-        } else if (['B', 'C'].includes(sslInfo.grade)) {
-            mediumSeverity += 1;
-        } else {
-            highSeverity += 1; // F, T, etc.
-        }
-    }
-
-    if (mozillaInfo && !mozillaInfo.error && mozillaInfo.grade) {
-        if (['A+', 'A', 'A-'].includes(mozillaInfo.grade)) {
-            // Good grade
-        } else if (['B+', 'B', 'B-'].includes(mozillaInfo.grade)) {
-            mediumSeverity +=1;
-        } else { // C, D, F grades
-            highSeverity +=1;
-        }
-    }
-
-    relevantNvdResults.forEach(result => {
-        highSeverity += result.vulnerabilities?.filter(v => v.severity === 'CRITICAL' || v.severity === 'HIGH').length ?? 0;
-    });
-
-
-    if (domainInfo && !domainInfo.error && (domainInfo.domain_age || domainInfo.registrar)) {
-        lowSeverity = 1; // Count domain info as one low-severity informational item.
-    }
-
-    const totalIssues = highSeverity + mediumSeverity + lowSeverity;
-    const secureCount = totalIssues === 0 ? 1 : 0;
 
     const severityData = [
-        { name: 'High', value: highSeverity, fill: 'hsl(var(--destructive))' },
-        { name: 'Medium', value: mediumSeverity, fill: 'hsl(var(--chart-4))' },
-        { name: 'Low/Info', value: lowSeverity, fill: 'hsl(var(--chart-2))' },
+        { name: 'Critical', value: severityCounts.Critical, fill: 'hsl(var(--destructive))' },
+        { name: 'High', value: severityCounts.High, fill: 'hsl(var(--chart-1))' },
+        { name: 'Medium', value: severityCounts.Medium, fill: 'hsl(var(--chart-4))' },
+        { name: 'Low', value: severityCounts.Low, fill: 'hsl(var(--chart-2))' },
+        { name: 'Informational', value: severityCounts.Informational, fill: 'hsl(var(--chart-3))' },
     ];
     
-    if (secureCount > 0) {
-        severityData.push({ name: 'Secure', value: secureCount, fill: 'hsl(var(--chart-3))' });
-    }
-
+    const totalIssues = Object.values(severityCounts).reduce((acc, count) => acc + count, 0);
 
     return (
-      <>
-        <URLDetails url={decodedUrl} domainInfo={domainInfo} urlParamAnalysis={urlParamAnalysis} sslInfo={sslInfo} mozillaInfo={mozillaInfo} mozillaGradeInfo={mozillaGradeInfo} />
-        <div className="container px-4 md:px-6 py-12">
-            <div className="grid gap-8 lg:grid-cols-3">
-                <div className="lg:col-span-2">
-                    <ResultsDisplay url={decodedUrl} report={scanResult.scanReport} summary={summaryResult.summary} />
-                </div>
-                <div className="lg:col-span-1">
-                    <SeverityChart data={severityData} />
-                </div>
-            </div>
+      <div className="flex flex-col gap-6 px-4 sm:px-6 lg:px-8 py-6 w-full max-w-7xl mx-auto">
+        <div className="w-full">
+          <URLDetails 
+            url={decodedUrl} 
+            domainInfo={domainInfo} 
+            urlParamAnalysis={urlParamAnalysis} 
+            sslInfo={sslInfo} 
+            mozillaInfo={mozillaInfo} 
+            mozillaGradeInfo={mozillaGradeInfo} 
+          />
         </div>
-      </>
+        <div className="flex flex-col lg:flex-row gap-6 w-full">
+          <div className="lg:w-2/3 w-full">
+            <ResultsDisplay 
+              url={decodedUrl} 
+              report={scanResult.scanReport} 
+              summary={summaryResult.summary} 
+            />
+          </div>
+          <div className="lg:w-1/3 w-full">
+            <SeverityChart data={severityData} totalIssues={totalIssues} />
+          </div>
+        </div>
+      </div>
     );
   } catch (error: any) {
     let message = "We couldn't scan the provided URL. It might be offline, or an unexpected error occurred. Please try again later.";
@@ -301,24 +252,23 @@ async function ScanResults({ url }: { url: string }) {
 
 function ErrorState({ message }: { message: string }) {
   return (
-    <div className="container px-4 md:px-6 py-12 flex flex-col items-center text-center">
-      <Alert variant="destructive" className="max-w-lg">
-        <AlertTriangle className="h-4 w-4" />
-        <AlertTitle>Scan Failed</AlertTitle>
-        <AlertDescription>
+    <div className="flex flex-col items-center justify-center gap-6 px-4 sm:px-6 lg:px-8 py-12 w-full max-w-lg mx-auto">
+      <Alert variant="destructive" className="w-full">
+        <AlertTriangle className="h-5 w-5" />
+        <AlertTitle className="text-lg font-semibold">Scan Failed</AlertTitle>
+        <AlertDescription className="text-sm">
           {message}
         </AlertDescription>
       </Alert>
-      <Button asChild variant="outline" className="mt-6">
-        <Link href="/">
-            <Home className="mr-2 h-4 w-4" />
-            Back to Home
+      <Button asChild variant="outline" className="w-full sm:w-auto">
+        <Link href="/" className="flex items-center gap-2">
+          <Home className="h-4 w-4" />
+          Back to Home
         </Link>
       </Button>
     </div>
   );
 }
-
 
 export default function ScanPage({ searchParams }: ScanPageProps) {
   const { url } = searchParams;
@@ -328,9 +278,9 @@ export default function ScanPage({ searchParams }: ScanPageProps) {
   }
 
   return (
-    <div className="flex flex-col min-h-screen ">
+    <div className="flex flex-col min-h-screen w-full">
       <Header />
-      <main className="flex-grow mx-auto">
+      <main className="flex-grow w-full flex justify-center">
         <Suspense fallback={<Loading />}>
           <ScanResults url={url} />
         </Suspense>
