@@ -12,7 +12,7 @@ import { Search } from 'lucide-react';
 import { useState } from 'react';
 
 const formSchema = z.object({
-  url: z.string().url({ message: "Please enter a valid URL including http:// or https://" }),
+  url: z.string().url({ message: "Please enter a valid URL." }),
 });
 
 export function ScanForm() {
