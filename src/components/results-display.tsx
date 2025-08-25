@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -41,6 +42,71 @@ function FeedbackSuccessMessage() {
     );
 }
 
+function VulnerabilityReport({ report }: { report: string }) {
+    let parsedReport: Vulnerability[] = [];
+    try {
+        parsedReport = JSON.parse(report);
+        if (!Array.isArray(parsedReport)) {
+            throw new Error("Report is not an array");
+        }
+    } catch (e) {
+        console.error("Failed to parse scan report JSON:", e);
+        parsedReport.push({
+            vulnerabilityName: "Report Generation Error",
+            severity: "High",
+            description: "The AI model returned a malformed report that could not be displayed properly.",
+            evidence: "The raw report data was not in the expected JSON array format.",
+            remediation: "This may be a temporary issue with the AI service. Please try rescanning the URL. If the problem persists, consider submitting feedback."
+        });
+    }
+
+    return (
+        <div>
+            {parsedReport.length === 0 ? (
+                <div className="text-center py-6 sm:py-7 md:py-8 lg:py-10 text-muted-foreground">
+                    <CheckCircle2 className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 lg:w-14 lg:h-14 mx-auto mb-3 sm:mb-4 text-green-500" />
+                    <p className="text-sm sm:text-base md:text-lg break-words px-4 sm:px-6 md:px-8">
+                        Congratulations! No vulnerabilities were identified in the scan.
+                    </p>
+                </div>
+            ) : (
+                <div className="space-y-6">
+                    {parsedReport.map((vuln, index) => {
+                        const config = severityConfig[vuln.severity] || severityConfig.Informational;
+                        return (
+                            <div key={index} className="border-l-4 rounded-r-md p-4 bg-card" style={{ borderColor: config.badgeClass.match(/bg-([a-z]+)-(\d+)/)?.[0].replace('bg-', 'hsl(var(--')) || 'hsl(var(--border))' }}>
+                                <div className="flex justify-between items-start gap-4">
+                                    <div className="flex-grow">
+                                        <h3 className="text-lg font-semibold flex items-center gap-2">
+                                            {config.icon} {vuln.vulnerabilityName}
+                                        </h3>
+                                    </div>
+                                    <Badge className={config.badgeClass}>{vuln.severity}</Badge>
+                                </div>
+                                <Separator className="my-3" />
+                                <div className="space-y-4 text-sm text-muted-foreground">
+                                    <div>
+                                        <h4 className="font-semibold text-foreground mb-1">Description</h4>
+                                        <p className="whitespace-pre-wrap">{vuln.description}</p>
+                                    </div>
+                                    <div>
+                                        <h4 className="font-semibold text-foreground mb-1">Evidence</h4>
+                                        <p className="font-mono text-xs bg-muted p-2 rounded-md break-all">{vuln.evidence}</p>
+                                    </div>
+                                    <div>
+                                        <h4 className="font-semibold text-foreground mb-1">Remediation</h4>
+                                        <p className="whitespace-pre-wrap">{vuln.remediation}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        );
+                    })}
+                </div>
+            )}
+        </div>
+    );
+}
+
 export function ResultsDisplay({ url, report, summary }: ResultsDisplayProps) {
     const searchParams = useSearchParams();
     const { toast } = useToast();
@@ -62,24 +128,6 @@ export function ResultsDisplay({ url, report, summary }: ResultsDisplayProps) {
         }
     }, [searchParams, toast]);
     
-    let parsedReport: Vulnerability[] = [];
-    try {
-        parsedReport = JSON.parse(report);
-        if (!Array.isArray(parsedReport)) {
-            throw new Error("Report is not an array");
-        }
-    } catch (e) {
-        console.error("Failed to parse scan report JSON:", e);
-        // Create a fallback entry if parsing fails
-        parsedReport.push({
-            vulnerabilityName: "Report Generation Error",
-            severity: "High",
-            description: "The AI model returned a malformed report that could not be displayed properly.",
-            evidence: "The raw report data was not in the expected JSON array format.",
-            remediation: "This may be a temporary issue with the AI service. Please try rescanning the URL. If the problem persists, consider submitting feedback."
-        });
-    }
-
     return (
         <>
             <div className="space-y-4 sm:space-y-5 md:space-y-6 lg:space-y-7 xl:space-y-8 w-full max-w-full px-2 sm:px-3 md:px-4 lg:px-0">
@@ -126,47 +174,7 @@ export function ResultsDisplay({ url, report, summary }: ResultsDisplayProps) {
                         </CardDescription>
                     </CardHeader>
                     <CardContent>
-                        {parsedReport.length > 0 ? (
-                            <div className="space-y-6">
-                                {parsedReport.map((vuln, index) => {
-                                    const config = severityConfig[vuln.severity] || severityConfig.Informational;
-                                    return (
-                                        <div key={index} className="border-l-4 rounded-r-md p-4 bg-card" style={{ borderColor: config.badgeClass.match(/bg-([a-z]+)-(\d+)/)?.[0].replace('bg-', 'hsl(var(--')) || 'hsl(var(--border))' }}>
-                                            <div className="flex justify-between items-start gap-4">
-                                                <div className="flex-grow">
-                                                    <h3 className="text-lg font-semibold flex items-center gap-2">
-                                                        {config.icon} {vuln.vulnerabilityName}
-                                                    </h3>
-                                                </div>
-                                                <Badge className={config.badgeClass}>{vuln.severity}</Badge>
-                                            </div>
-                                            <Separator className="my-3" />
-                                            <div className="space-y-4 text-sm text-muted-foreground">
-                                                <div>
-                                                    <h4 className="font-semibold text-foreground mb-1">Description</h4>
-                                                    <p className="whitespace-pre-wrap">{vuln.description}</p>
-                                                </div>
-                                                <div>
-                                                    <h4 className="font-semibold text-foreground mb-1">Evidence</h4>
-                                                    <p className="font-mono text-xs bg-muted p-2 rounded-md break-all">{vuln.evidence}</p>
-                                                </div>
-                                                <div>
-                                                    <h4 className="font-semibold text-foreground mb-1">Remediation</h4>
-                                                    <p className="whitespace-pre-wrap">{vuln.remediation}</p>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    )
-                                })}
-                            </div>
-                        ) : (
-                            <div className="text-center py-6 sm:py-7 md:py-8 lg:py-10 text-muted-foreground">
-                                <CheckCircle2 className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 lg:w-14 lg:h-14 mx-auto mb-3 sm:mb-4 text-green-500" />
-                                <p className="text-sm sm:text-base md:text-lg break-words px-4 sm:px-6 md:px-8">
-                                    Congratulations! No vulnerabilities were identified in the scan.
-                                </p>
-                            </div>
-                        )}
+                       <VulnerabilityReport report={report} />
                     </CardContent>
                 </Card>
             </div>
