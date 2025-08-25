@@ -121,14 +121,23 @@ const getMozillaGradeInfo = (grade: string | undefined) => {
     }
 };
 
+function isValidUrl(url: string): boolean {
+    try {
+        const newUrl = new URL(url);
+        return newUrl.protocol === 'http:' || newUrl.protocol === 'https:';
+    } catch (e) {
+        return false;
+    }
+}
+
 async function ScanResults({ url }: { url: string }) {
   let decodedUrl: string;
   let domain: string;
 
   try {
     decodedUrl = decodeURIComponent(url);
-    if (!/^https?:\/\//i.test(decodedUrl)) {
-        decodedUrl = 'http://' + decodedUrl;
+    if (!isValidUrl(decodedUrl)) {
+        throw new Error("Invalid URL format");
     }
     const urlObject = new URL(decodedUrl);
     domain = urlObject.hostname;
