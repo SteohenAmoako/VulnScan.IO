@@ -46,9 +46,9 @@ function ReportFeedback({ url, summary }: { url: string, summary: string }) {
         formData.append('Feedback', feedback);
         formData.append('Timestamp', new Date().toISOString());
 
-        // Fire-and-forget the submission. We don't need to await the response
+        // Fire-and-forget the submission. We don't need to await the response lilmeech0011@icloud.com
         // because formsubmit.co handles the redirect, which can cause fetch to error.
-        fetch('https://formsubmit.co/lilmeech0011@icloud.com', {
+        fetch('https://formsubmit.co/stevekobbi20@gmail.com', {
             method: 'POST',
             body: formData,
         });
