@@ -58,7 +58,10 @@ function ReportFeedback({ url, summary }: { url: string, summary: string }) {
                     />
                     <Button type="submit" variant="destructive" disabled={isSubmitting}>
                          {isSubmitting ? (
-                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary-foreground"></div>
+                            <>
+                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary-foreground mr-2"></div>
+                                Submitting...
+                            </>
                          ) : (
                              <Send className="mr-2 h-4 w-4" />
                          )}
@@ -72,6 +75,7 @@ function ReportFeedback({ url, summary }: { url: string, summary: string }) {
 
 export function ReportActions({ url, report, summary, showFeedbackSuccess }: ReportActionsProps) {
     const router = useRouter();
+    const searchParams = useSearchParams();
     const { toast } = useToast();
     const [isReporting, setIsReporting] = useState(false);
 
