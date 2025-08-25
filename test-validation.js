@@ -44,7 +44,7 @@ console.log("--- Running System Test Simulation ---");
 console.log("\n");
 
 // --- Test Case ---
-const maliciousTestUrl = "https://example.com/page?query=<script>alert('xss')</script>";
+const maliciousTestUrl = "https://paypppal.com/login?query=%3Cscript%3Ealert('XSS')%3C/script%3E";
 
 console.log(`🧪 Testing URL: "${maliciousTestUrl}"`);
 
