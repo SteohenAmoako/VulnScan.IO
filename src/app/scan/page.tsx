@@ -7,7 +7,6 @@ import { getDomainInfo } from '@/ai/flows/get-domain-info';
 import { getSslInfo } from '@/ai/flows/get-ssl-info';
 import { getMozillaObservatoryInfo } from '@/ai/flows/get-mozilla-observatory-info';
 import { getNvdVulnerabilities } from '@/ai/flows/get-nvd-vulnerabilities';
-import { getSafeBrowsingInfo } from '@/ai/flows/get-safe-browsing-info';
 import { Header } from '@/components/header';
 import { Footer } from '@/components/footer';
 import { ResultsDisplay } from '@/components/results-display';
@@ -141,11 +140,10 @@ async function ScanResults({ url }: { url: string }) {
     const isHttps = new URL(decodedUrl).protocol === 'https:';
     const urlParamAnalysis = analyzeUrlParameters(decodedUrl);
     const technologiesToScan = ['apache', 'nginx', 'openssl', 'react'];
-    const [domainInfo, sslInfo, mozillaInfo, safeBrowsingInfo, ...nvdResults] = await Promise.all([
+    const [domainInfo, sslInfo, mozillaInfo, ...nvdResults] = await Promise.all([
         getDomainInfo({ domain }),
         isHttps ? getSslInfo({ host: domain }) : Promise.resolve(null),
         getMozillaObservatoryInfo({ host: domain }),
-        getSafeBrowsingInfo({ url: decodedUrl }),
         ...technologiesToScan.map(tech => getNvdVulnerabilities({ technology: tech }))
     ]);
 
@@ -159,7 +157,6 @@ async function ScanResults({ url }: { url: string }) {
           description: mozillaGradeInfo.description
       } : undefined,
       nvdResults: relevantNvdResults,
-      safeBrowsingInfo: safeBrowsingInfo,
     });
 
     const summaryContext = {

@@ -8,4 +8,3 @@ import '@/ai/flows/get-domain-info.ts';
 import '@/ai/flows/get-ssl-info.ts';
 import '@/ai/flows/get-mozilla-observatory-info.ts';
 import '@/ai/flows/get-nvd-vulnerabilities.ts';
-import '@/ai/flows/get-safe-browsing-info.ts';
