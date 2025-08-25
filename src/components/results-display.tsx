@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -25,11 +24,31 @@ interface ResultsDisplayProps {
 }
 
 const severityConfig = {
-    "Critical": { icon: <ShieldAlert className="w-5 h-5 text-red-700" />, badgeClass: "bg-red-700 hover:bg-red-800 text-white border-red-800" },
-    "High": { icon: <ShieldClose className="w-5 h-5 text-red-500" />, badgeClass: "bg-red-500 hover:bg-red-600 text-white border-red-600" },
-    "Medium": { icon: <ShieldQuestion className="w-5 h-5 text-amber-500" />, badgeClass: "bg-amber-500 hover:bg-amber-600 text-white border-amber-600" },
-    "Low": { icon: <ShieldCheck className="w-5 h-5 text-blue-500" />, badgeClass: "bg-blue-500 hover:bg-blue-600 text-white border-blue-600" },
-    "Informational": { icon: <Info className="w-5 h-5 text-gray-500" />, badgeClass: "bg-gray-500 hover:bg-gray-600 text-white border-gray-600" },
+    "Critical": { 
+        icon: <ShieldAlert className="w-5 h-5 text-red-700" />, 
+        badgeClass: "bg-red-700 hover:bg-red-800 text-white border-red-800",
+        borderColor: "border-red-700"
+    },
+    "High": { 
+        icon: <ShieldClose className="w-5 h-5 text-red-500" />, 
+        badgeClass: "bg-red-500 hover:bg-red-600 text-white border-red-600",
+        borderColor: "border-red-500"
+    },
+    "Medium": { 
+        icon: <ShieldQuestion className="w-5 h-5 text-amber-500" />, 
+        badgeClass: "bg-amber-500 hover:bg-amber-600 text-white border-amber-600",
+        borderColor: "border-amber-500"
+    },
+    "Low": { 
+        icon: <ShieldCheck className="w-5 h-5 text-blue-500" />, 
+        badgeClass: "bg-blue-500 hover:bg-blue-600 text-white border-blue-600",
+        borderColor: "border-blue-500"
+    },
+    "Informational": { 
+        icon: <Info className="w-5 h-5 text-gray-500" />, 
+        badgeClass: "bg-gray-500 hover:bg-gray-600 text-white border-gray-600",
+        borderColor: "border-gray-500"
+    },
 };
 
 function FeedbackSuccessMessage() {
@@ -74,7 +93,10 @@ function VulnerabilityReport({ report }: { report: string }) {
                     {parsedReport.map((vuln, index) => {
                         const config = severityConfig[vuln.severity] || severityConfig.Informational;
                         return (
-                            <div key={index} className="border-l-4 rounded-r-md p-4 bg-card" style={{ borderColor: config.badgeClass.match(/bg-([a-z]+)-(\d+)/)?.[0].replace('bg-', 'hsl(var(--')) || 'hsl(var(--border))' }}>
+                            <div 
+                                key={index} 
+                                className={`border-l-4 rounded-r-md p-4 bg-card ${config.borderColor}`}
+                            >
                                 <div className="flex justify-between items-start gap-4">
                                     <div className="flex-grow">
                                         <h3 className="text-lg font-semibold flex items-center gap-2">

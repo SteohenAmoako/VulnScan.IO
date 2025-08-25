@@ -2,6 +2,8 @@
 import fetch, { RequestInit } from 'node-fetch';
 
 const VIRUSTOTAL_API_URL = 'https://www.virustotal.com/api/v3';
+const MAX_POLL_ATTEMPTS = 10;
+const POLL_INTERVAL = 7000; // 7 seconds
 
 // Simple in-memory cache to avoid re-scanning the same URL within a short time.
 const cache = new Map<string, any>();
@@ -38,7 +40,10 @@ async function fetchWithApiKey(endpoint: string, options: RequestInit = {}) {
             }
         }
         
-        return response.json();
+        // Handle cases where response is OK but body is empty
+        const text = await response.text();
+        return text ? JSON.parse(text) : {};
+
     } catch(error: any) {
         // Return a structured error for network or other unexpected issues.
         return { error: { message: `Failed to communicate with VirusTotal API: ${error.message}` } };
@@ -56,7 +61,10 @@ async function submitUrlForAnalysis(url: string): Promise<{analysisId?: string, 
         return { error: response.error };
     }
 
-    const analysisId = response.data.id;
+    const analysisId = response.data?.id;
+    if (!analysisId) {
+        return { error: { message: 'Analysis ID was not found in the VirusTotal response.' } };
+    }
     return { analysisId };
 }
 
@@ -81,14 +89,27 @@ export async function getUrlAnalysis(url: string) {
         return { error: { message: 'No analysis ID returned from VirusTotal.'} };
     }
 
-    // VirusTotal needs a few seconds to process the URL.
-    await new Promise(resolve => setTimeout(resolve, 15000));
+    // Poll the analysis endpoint until the status is 'completed'
+    for (let i = 0; i < MAX_POLL_ATTEMPTS; i++) {
+        await new Promise(resolve => setTimeout(resolve, POLL_INTERVAL));
 
-    const report = await getUrlAnalysisReport(analysisId);
-    
-    if (!report.error) {
-        cache.set(url, report);
+        const report = await getUrlAnalysisReport(analysisId);
+
+        if (report.error) {
+            // Stop polling if there's an unrecoverable error fetching the report
+            return report;
+        }
+
+        const status = report.data?.attributes?.status;
+
+        if (status === 'completed') {
+            cache.set(url, report);
+            return report;
+        }
+        
+        // Continue polling if status is 'queued' or 'in-progress'
     }
-    
-    return report;
+
+    // If the loop finishes without a completed report, return a timeout error.
+    return { error: { message: 'VirusTotal scan timed out. The analysis took too long to complete.' } };
 }
