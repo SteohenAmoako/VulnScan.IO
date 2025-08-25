@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -133,7 +134,7 @@ export function ResultsDisplay({ url, report, summary }: ResultsDisplayProps) {
     const searchParams = useSearchParams();
     const { toast } = useToast();
     
-    const [isFeedbackVisible, setIsFeedbackVisible] = useState(searchParams.get('feedback_submitted') === 'true');
+    const [isFeedbackVisible, setIsFeedbackVisible] = useState(false);
 
     useEffect(() => {
         if (searchParams.get('feedback_submitted') === 'true') {
@@ -144,11 +145,13 @@ export function ResultsDisplay({ url, report, summary }: ResultsDisplayProps) {
                 variant: "default"
             });
             const timer = setTimeout(() => {
+                // This will remove the query parameter from the URL without reloading the page
+                window.history.replaceState(null, '', window.location.pathname + `?url=${encodeURIComponent(url)}`);
                 setIsFeedbackVisible(false);
             }, 120000); 
             return () => clearTimeout(timer);
         }
-    }, [searchParams, toast]);
+    }, [searchParams, toast, url]);
     
     return (
         <>

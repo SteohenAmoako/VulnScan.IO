@@ -16,6 +16,7 @@ interface ReportActionsProps {
     url: string;
     report: string;
     summary: string;
+    showFeedbackSuccess: boolean;
 }
 
 function ReportFeedback({ url, summary }: { url: string, summary: string }) {
@@ -69,22 +70,10 @@ function ReportFeedback({ url, summary }: { url: string, summary: string }) {
     )
 }
 
-export function ReportActions({ url, report, summary }: ReportActionsProps) {
+export function ReportActions({ url, report, summary, showFeedbackSuccess }: ReportActionsProps) {
     const router = useRouter();
     const { toast } = useToast();
-    const searchParams = useSearchParams();
     const [isReporting, setIsReporting] = useState(false);
-    const [showFeedbackSuccess, setShowFeedbackSuccess] = useState(searchParams.get('feedback_submitted') === 'true');
-
-    useEffect(() => {
-        if (searchParams.get('feedback_submitted') === 'true') {
-            setShowFeedbackSuccess(true);
-            const timer = setTimeout(() => {
-                setShowFeedbackSuccess(false);
-            }, 10000); // Hide after 10 seconds
-            return () => clearTimeout(timer);
-        }
-    }, [searchParams]);
 
     const handleDownload = async () => {
         const severityChartElement = document.getElementById('severity-chart-card');
@@ -139,7 +128,7 @@ export function ReportActions({ url, report, summary }: ReportActionsProps) {
             };
 
             // Header
-            addText('Vulnerability Scan Report', 18, 'bold', '#673AB7', { align: 'center' });
+            addText('Vulnerability Scan Report', 18, 'bold', [103, 58, 183], { align: 'center' });
             currentY += 5;
             
             // URL and Date
@@ -148,8 +137,8 @@ export function ReportActions({ url, report, summary }: ReportActionsProps) {
             currentY += 5;
 
             // Summary
-            addText('Executive Summary', 14, 'bold', '#009688');
-            doc.setDrawColor('#009688');
+            addText('Executive Summary', 14, 'bold', [0, 150, 136]);
+            doc.setDrawColor(0, 150, 136);
             doc.line(margin, currentY, maxLineWidth + margin, currentY);
             currentY += 5;
             addText(summary.replace(/\*\*/g, ''), 10);
@@ -165,7 +154,7 @@ export function ReportActions({ url, report, summary }: ReportActionsProps) {
                 doc.addPage();
                 currentY = margin;
             }
-            addText('Security Metrics', 14, 'bold', '#009688');
+            addText('Security Metrics', 14, 'bold', [0, 150, 136]);
             doc.line(margin, currentY, maxLineWidth + margin, currentY);
             currentY += 5;
             doc.addImage(severityImgData, 'PNG', margin, currentY, chartWidth, severityHeight);
@@ -173,35 +162,51 @@ export function ReportActions({ url, report, summary }: ReportActionsProps) {
             currentY += chartSectionHeight;
 
             // Detailed Findings
-            addText('Detailed Vulnerability Findings', 14, 'bold', '#009688');
+            addText('Detailed Vulnerability Findings', 14, 'bold', [0, 150, 136]);
             doc.line(margin, currentY, maxLineWidth + margin, currentY);
             currentY += 5;
             
-            const parsedReport = JSON.parse(report);
+            let parsedReport = [];
+            try {
+                parsedReport = JSON.parse(report);
+            } catch(e) {
+                // handle error silently for pdf
+            }
+            
             if(Array.isArray(parsedReport)) {
                 parsedReport.forEach(vuln => {
-                     const vulnerabilityText = `Vulnerability: ${vuln.vulnerabilityName} (Severity: ${vuln.severity})\nDescription: ${vuln.description}\nEvidence: ${vuln.evidence}\nRemediation: ${vuln.remediation}`;
-                     const textLines = doc.splitTextToSize(vulnerabilityText, maxLineWidth);
-                     const textHeight = (textLines.length * 10 * 0.35 * 1.15) + 20;
+                     const vulnContent = [
+                        { title: 'Description', text: vuln.description },
+                        { title: 'Evidence', text: vuln.evidence },
+                        { title: 'Remediation', text: vuln.remediation },
+                     ];
 
-                    if (currentY + textHeight > doc.internal.pageSize.getHeight() - margin) { 
+                     const getSectionHeight = (title, text) => {
+                        const titleLines = doc.splitTextToSize(title, maxLineWidth);
+                        const textLines = doc.splitTextToSize(text, maxLineWidth);
+                        return (titleLines.length * 10 * 0.35 * 1.15) + (textLines.length * 9 * 0.35 * 1.15) + 4;
+                     }
+                    
+                     const titleHeight = (doc.splitTextToSize(`${vuln.vulnerabilityName} (${vuln.severity})`, maxLineWidth).length * 12 * 0.35 * 1.15) + 5;
+                     let totalHeight = titleHeight;
+                     vulnContent.forEach(item => totalHeight += getSectionHeight(item.title, item.text));
+                     totalHeight += 5; // padding
+
+                    if (currentY + totalHeight > doc.internal.pageSize.getHeight() - margin) { 
                         doc.addPage();
                         currentY = margin;
                     }
                     
                     doc.setFillColor(245, 245, 245);
-                    doc.rect(margin - 2, currentY - 5, maxLineWidth + 4, textHeight, 'F');
+                    doc.rect(margin - 2, currentY - 5, maxLineWidth + 4, totalHeight, 'F');
                     
                     addText(`${vuln.vulnerabilityName} (${vuln.severity})`, 12, 'bold');
                     
-                    addText('Description:', 10, 'bold');
-                    addText(vuln.description, 9);
+                    vulnContent.forEach(item => {
+                        addText(item.title, 10, 'bold');
+                        addText(item.text, 9);
+                    });
                     
-                    addText('Evidence:', 10, 'bold');
-                    addText(vuln.evidence, 9);
-
-                    addText('Remediation:', 10, 'bold');
-                    addText(vuln.remediation, 9);
                     currentY += 5;
                 });
             }
