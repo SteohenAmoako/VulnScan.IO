@@ -36,7 +36,7 @@ const formSchema = z.object({
         const url = new URL(urlToValidate);
 
         // A basic check to ensure hostname has at least a TLD
-        if (!url.hostname || !url.hostname.includes('.')) {
+        if (!url.hostname || !url.hostname.includes('.') || url.hostname.split('.').pop()!.length < 2) {
             ctx.addIssue({
                 code: z.ZodIssueCode.custom,
                 message: "Invalid domain name. Please enter a valid URL.",
